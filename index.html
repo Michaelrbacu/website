@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Michael's Blog</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Michael's Blog</h1>
+            <p class="tagline">Personal thoughts, posts, and videos</p>
+        </div>
+        <nav>
+            <a href="#" onclick="showPage('blog')" class="nav-link active" id="nav-blog">Blog</a>
+            <a href="#" onclick="showPage('admin')" class="nav-link" id="nav-admin">Admin</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Blog Page -->
+        <div id="blog-page" class="page active">
+            <section class="blog-container">
+                <div class="filters">
+                    <button class="filter-btn active" onclick="filterPosts('all')">All Posts</button>
+                    <button class="filter-btn" onclick="filterPosts('text')">Text</button>
+                    <button class="filter-btn" onclick="filterPosts('video')">Videos</button>
+                </div>
+                <div id="posts-container" class="posts-grid">
+                    <!-- Posts will be loaded here -->
+                </div>
+                <div id="empty-state" class="empty-state">
+                    <p>No posts yet. <a href="#" onclick="showPage('admin')">Create your first post!</a></p>
+                </div>
+            </section>
+        </div>
+
+        <!-- Admin Page -->
+        <div id="admin-page" class="page">
+            <section class="admin-container">
+                <h2>Admin Panel</h2>
+                
+                <div class="admin-section">
+                    <h3>Create New Post</h3>
+                    <form id="post-form">
+                        <div class="form-group">
+                            <label for="post-title">Title</label>
+                            <input type="text" id="post-title" required placeholder="Post title">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="post-content">Content</label>
+                            <textarea id="post-content" rows="8" required placeholder="Write your post..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="post-type">Post Type</label>
+                            <select id="post-type" onchange="updatePostTypeUI()">
+                                <option value="text">Text Post</option>
+                                <option value="video">Video</option>
+                            </select>
+                        </div>
+
+                        <div id="video-section" class="form-group hidden">
+                            <label for="video-url">Video URL (YouTube, Vimeo, or direct link)</label>
+                            <input type="url" id="video-url" placeholder="https://www.youtube.com/embed/...">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="post-tags">Tags (comma-separated)</label>
+                            <input type="text" id="post-tags" placeholder="tag1, tag2, tag3">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Create Post</button>
+                    </form>
+                </div>
+
+                <div class="admin-section">
+                    <h3>Manage Posts</h3>
+                    <div id="admin-posts-list">
+                        <!-- Admin post list will be loaded here -->
+                    </div>
+                    <div id="admin-empty-state" class="empty-state">
+                        <p>No posts to manage yet.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Michael's Blog. All rights reserved.</p>
+    </footer>
+
+    <!-- Modal for viewing full post -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modal-body">
+                <!-- Post content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
