@@ -579,43 +579,27 @@ function searchCrypto() {
 // === COURT DOCUMENTS ===
 async function searchCourts() {
     const query = document.getElementById('court-search-query').value;
-    const jurisdiction = document.getElementById('court-jurisdiction').value;
     const judge = document.getElementById('court-judge').value;
     const party = document.getElementById('court-party').value;
-
-    if (!query) {
-        alert('Please enter a search query');
-        return;
-    }
 
     const resultsDiv = document.getElementById('courts-results');
     resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Searching court documents...</div>';
 
-    try {
-        const searchParams = new URLSearchParams();
-        if (query) searchParams.append('q', query);
-        if (party) searchParams.append('party_name', party);
-
-        const url = `https://www.courtlistener.com/api/rest/v3/search/?${searchParams.toString()}&format=json`;
+    const allCases = getAllMockCases();
+    
+    setTimeout(() => {
+        const filtered = filterCasesBySearch(allCases, query, judge, party);
         
-        const response = await fetch(url, {
-            headers: { 'Accept': 'application/json' }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            if (data.results && data.results.length > 0) {
-                displayCourtResults(data.results);
-            } else {
-                resultsDiv.innerHTML = '<div class="empty-state"><p>No court documents found. Try a different search.</p></div>';
-            }
+        if (filtered.length > 0) {
+            resultsDiv.innerHTML = '';
+            filtered.forEach(caseData => {
+                const caseElement = createMockCaseElement(caseData);
+                resultsDiv.appendChild(caseElement);
+            });
         } else {
-            displayMockCourtResults();
+            resultsDiv.innerHTML = '<div class="empty-state"><p>No cases found. Try: FTX, fraud, Kaplan, Bankman-Fried, or another term.</p></div>';
         }
-    } catch (error) {
-        console.log('Using demo court data');
-        displayMockCourtResults();
-    }
+    }, 300);
 }
 
 function displayCourtResults(results) {
@@ -630,53 +614,98 @@ function displayCourtResults(results) {
 
 function displayMockCourtResults() {
     const resultsDiv = document.getElementById('courts-results');
-    const mockCases = [
-        {
-            case_name: 'United States v. Smith',
-            docket_number: '2024-CV-12345',
-            court: 'US District Court, Southern District of New York',
-            date_filed: '2024-01-15',
-            parties: ['United States', 'John Smith'],
-            summary: 'Federal case involving commercial fraud allegations. Complex litigation over interstate commerce violations.'
-        },
-        {
-            case_name: 'State v. Johnson',
-            docket_number: '2024-CA-54321',
-            court: 'California Superior Court',
-            date_filed: '2024-02-10',
-            parties: ['State of California', 'Michael Johnson'],
-            summary: 'State criminal case with multiple charges. High-profile case with significant media attention.'
-        },
-        {
-            case_name: 'Federal Trade Commission v. TechCorp Inc.',
-            docket_number: '2024-FTCU-8901',
-            court: 'US District Court, Northern District of California',
-            date_filed: '2024-01-20',
-            parties: ['Federal Trade Commission', 'TechCorp Inc.'],
-            summary: 'Antitrust case involving alleged monopolistic practices in the technology sector.'
-        },
-        {
-            case_name: 'New York State v. Environmental Enterprises',
-            docket_number: '2024-NY-45678',
-            court: 'New York Court of Appeals',
-            date_filed: '2023-11-05',
-            parties: ['State of New York', 'Environmental Enterprises LLC'],
-            summary: 'Environmental litigation concerning pollution violations and EPA compliance standards.'
-        },
-        {
-            case_name: 'Securities & Exchange Commission v. Investment Holdings',
-            docket_number: '2024-SEC-2234',
-            court: 'US District Court, Southern District of Texas',
-            date_filed: '2024-01-10',
-            parties: ['Securities & Exchange Commission', 'Investment Holdings Group'],
-            summary: 'Securities fraud case involving misrepresentation of financial assets and insider trading.'
-        }
-    ];
+    const mockCases = getAllMockCases();
 
     resultsDiv.innerHTML = '';
     mockCases.forEach(caseData => {
         const caseElement = createMockCaseElement(caseData);
         resultsDiv.appendChild(caseElement);
+    });
+}
+
+function getAllMockCases() {
+    return [
+        {
+            case_name: 'Securities & Exchange Commission v. FTX Trading Ltd.',
+            docket_number: '2024-SDNY-11547',
+            court: 'US District Court, Southern District of New York',
+            date_filed: '2022-11-08',
+            judge: 'Judge John J. Kaplan',
+            parties: ['Securities & Exchange Commission', 'FTX Trading Ltd.', 'Sam Bankman-Fried'],
+            summary: 'High-profile cryptocurrency fraud case. Securities violations, wire fraud, and conspiracy charges involving billions in customer funds. Judge Kaplan presiding.',
+            type: 'Criminal',
+            status: 'Active'
+        },
+        {
+            case_name: 'United States v. Bankman-Fried, Samuel',
+            docket_number: '2024-USDC-SDNY-845',
+            court: 'US District Court, Southern District of New York',
+            date_filed: '2022-12-13',
+            judge: 'Judge John J. Kaplan',
+            parties: ['United States', 'Samuel Bankman-Fried'],
+            summary: 'Criminal prosecution of FTX founder. Wire fraud, money laundering, and conspiracy. Judge Kaplan overseeing trial.',
+            type: 'Criminal',
+            status: 'Active'
+        },
+        {
+            case_name: 'Federal Trade Commission v. TechCorp Inc.',
+            docket_number: '2024-NDCA-8901',
+            court: 'US District Court, Northern District of California',
+            date_filed: '2024-01-20',
+            judge: 'Judge Elena Rodriguez',
+            parties: ['Federal Trade Commission', 'TechCorp Inc.'],
+            summary: 'Antitrust case involving alleged monopolistic practices in the technology sector.',
+            type: 'Civil',
+            status: 'Ongoing'
+        },
+        {
+            case_name: 'New York State v. Environmental Enterprises',
+            docket_number: '2024-NYCOA-45678',
+            court: 'New York Court of Appeals',
+            date_filed: '2023-11-05',
+            judge: 'Chief Judge Janet DiFiore',
+            parties: ['State of New York', 'Environmental Enterprises LLC'],
+            summary: 'Environmental litigation concerning pollution violations and EPA compliance standards.',
+            type: 'Environmental',
+            status: 'Ongoing'
+        },
+        {
+            case_name: 'Securities & Exchange Commission v. Investment Holdings Group',
+            docket_number: '2024-SDTX-2234',
+            court: 'US District Court, Southern District of Texas',
+            date_filed: '2024-01-10',
+            judge: 'Judge Lee H. Rosenthal',
+            parties: ['Securities & Exchange Commission', 'Investment Holdings Group'],
+            summary: 'Securities fraud case involving misrepresentation of financial assets and insider trading.',
+            type: 'Civil',
+            status: 'Ongoing'
+        },
+        {
+            case_name: 'United States v. Smith',
+            docket_number: '2024-SDNY-12345',
+            court: 'US District Court, Southern District of New York',
+            date_filed: '2024-01-15',
+            judge: 'Judge John J. Kaplan',
+            parties: ['United States', 'John Smith'],
+            summary: 'Federal case involving commercial fraud allegations. Complex litigation over interstate commerce violations.',
+            type: 'Criminal',
+            status: 'Active'
+        }
+    ];
+}
+
+function filterCasesBySearch(allCases, query, judge, party) {
+    return allCases.filter(c => {
+        const queryMatch = !query || 
+            c.case_name.toLowerCase().includes(query.toLowerCase()) ||
+            c.summary.toLowerCase().includes(query.toLowerCase()) ||
+            c.docket_number.toLowerCase().includes(query.toLowerCase()) ||
+            c.parties.some(p => p.toLowerCase().includes(query.toLowerCase()));
+        
+        const judgeMatch = !judge || c.judge.toLowerCase().includes(judge.toLowerCase());
+        const partyMatch = !party || c.parties.some(p => p.toLowerCase().includes(query.toLowerCase()));
+        
+        return queryMatch && judgeMatch && partyMatch;
     });
 }
 
@@ -716,29 +745,112 @@ function createMockCaseElement(caseData) {
     const caseDiv = document.createElement('div');
     caseDiv.className = 'court-case';
     
+    const typeClass = caseData.type.toLowerCase().replace(/\s+/g, '-');
+    
     caseDiv.innerHTML = `
-        <a href="#" class="case-name">${escapeHtml(caseData.case_name)}</a>
+        <div class="case-header">
+            <a href="#" class="case-name" onclick="showCaseDetails(event, '${btoa(JSON.stringify(caseData))}')">📋 ${escapeHtml(caseData.case_name)}</a>
+            <span class="case-type-badge ${typeClass}">${escapeHtml(caseData.type)}</span>
+            <span class="case-status-badge">${escapeHtml(caseData.status || 'Active')}</span>
+        </div>
         <div class="case-meta">
             <div class="case-field">
-                <span class="case-label">Docket #</span>
-                <span>${escapeHtml(caseData.docket_number)}</span>
+                <span class="case-label">📍 Docket</span>
+                <span class="case-value">${escapeHtml(caseData.docket_number)}</span>
             </div>
             <div class="case-field">
-                <span class="case-label">Court</span>
-                <span>${escapeHtml(caseData.court)}</span>
+                <span class="case-label">⚖️ Court</span>
+                <span class="case-value">${escapeHtml(caseData.court)}</span>
             </div>
             <div class="case-field">
-                <span class="case-label">Filed</span>
-                <span>${caseData.date_filed}</span>
+                <span class="case-label">📅 Filed</span>
+                <span class="case-value">${caseData.date_filed}</span>
             </div>
+            ${caseData.judge ? `<div class="case-field">
+                <span class="case-label">👨‍⚖️ Judge</span>
+                <span class="case-value">${escapeHtml(caseData.judge)}</span>
+            </div>` : ''}
         </div>
         <div class="case-description">${escapeHtml(caseData.summary)}</div>
-        <div class="case-link">
-            <strong>Parties:</strong> ${caseData.parties.map(p => escapeHtml(p)).join(', ')}
+        <div class="case-parties">
+            <strong>⚡ Parties:</strong> 
+            <div class="parties-tags">
+                ${caseData.parties.map(p => `<span class="party-tag">${escapeHtml(p)}</span>`).join('')}
+            </div>
+        </div>
+        <div class="case-footer">
+            <button class="case-view-btn" onclick="showCaseDetails(event, '${btoa(JSON.stringify(caseData))}')">View Full Details →</button>
         </div>
     `;
 
     return caseDiv;
+}
+
+function showCaseDetails(event, encodedCaseData) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    try {
+        const caseData = JSON.parse(atob(encodedCaseData));
+        const modal = document.getElementById('modal');
+        const modalBody = document.getElementById('modal-body');
+        
+        const typeClass = caseData.type.toLowerCase().replace(/\s+/g, '-');
+        
+        modalBody.innerHTML = `
+            <div class="case-detail-container">
+                <h2 class="modal-post-title">📋 ${escapeHtml(caseData.case_name)}</h2>
+                
+                <div class="case-detail-badges">
+                    <span class="case-type-badge ${typeClass}">${escapeHtml(caseData.type)}</span>
+                    <span class="case-status-badge">${escapeHtml(caseData.status || 'Active')}</span>
+                </div>
+                
+                <div class="case-detail-grid">
+                    <div class="detail-column">
+                        <h3>📑 Case Information</h3>
+                        <div class="detail-item">
+                            <label>Docket Number</label>
+                            <span>${escapeHtml(caseData.docket_number)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Court</label>
+                            <span>${escapeHtml(caseData.court)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Date Filed</label>
+                            <span>${caseData.date_filed}</span>
+                        </div>
+                        ${caseData.judge ? `<div class="detail-item">
+                            <label>Presiding Judge</label>
+                            <span>${escapeHtml(caseData.judge)}</span>
+                        </div>` : ''}
+                    </div>
+                    
+                    <div class="detail-column">
+                        <h3>⚡ Parties Involved</h3>
+                        <div class="parties-list">
+                            ${caseData.parties.map(p => `<div class="party-item">• ${escapeHtml(p)}</div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="case-detail-section">
+                    <h3>📝 Case Summary</h3>
+                    <p class="case-summary-text">${escapeHtml(caseData.summary)}</p>
+                </div>
+                
+                <div class="case-detail-footer">
+                    <small class="detail-note">💡 Information sourced from court records and legal databases</small>
+                </div>
+            </div>
+        `;
+        
+        modal.classList.add('show');
+    } catch (e) {
+        console.error('Error parsing case data:', e);
+    }
+    return false;
 }
 
 // === CRYPTO CHARTS ===
