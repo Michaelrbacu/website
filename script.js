@@ -1,13 +1,21 @@
-// Local storage key for posts
+// Local storage keys
 const STORAGE_KEY = 'michael_blog_posts';
+const ANALYTICS_KEY = 'michael_blog_analytics';
+const THEME_KEY = 'michael_blog_theme';
+const CURRENT_POSTS_TAB = 'current_posts_tab';
+
+// CourtListener API
+const COURTLISTENER_API = 'https://www.courtlistener.com/api/rest/v3';
 
 // Initialize the blog
 document.addEventListener('DOMContentLoaded', function() {
     loadPosts();
     setupEventListeners();
+    initTheme();
+    loadAnalytics();
 });
 
-// Event Listeners
+// Setup event listeners
 function setupEventListeners() {
     const postForm = document.getElementById('post-form');
     postForm.addEventListener('submit', handlePostSubmit);
@@ -20,42 +28,75 @@ function setupEventListeners() {
             closeModal();
         }
     });
+
+    // Theme toggle
+    document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+    // Blog search
+    document.getElementById('blog-search').addEventListener('input', searchPosts);
+
+    // Crypto search
+    document.getElementById('crypto-search').addEventListener('input', searchCrypto);
+
+    // Auto-save drafts
+    const contentArea = document.getElementById('post-content');
+    contentArea.addEventListener('input', function() {
+        document.getElementById('char-count').textContent = this.value.length + ' / 10000 characters';
+        saveDraft();
+    });
 }
 
-// Handle page navigation
+// === THEME MANAGEMENT ===
+function initTheme() {
+    const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        document.getElementById('theme-toggle').textContent = '☀️';
+    }
+}
+
+function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+    document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+}
+
+// === PAGE NAVIGATION ===
 function showPage(pageName) {
-    // Hide all pages
     document.querySelectorAll('.page').forEach(page => {
         page.classList.remove('active');
     });
 
-    // Remove active state from nav links
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active');
     });
 
-    // Show selected page
     document.getElementById(pageName + '-page').classList.add('active');
     document.getElementById('nav-' + pageName).classList.add('active');
 
-    // Refresh admin list if admin page is opened
     if (pageName === 'admin') {
         loadAdminPostsList();
+    } else if (pageName === 'crypto') {
+        loadCryptoData();
     }
 }
 
-// Handle post form submission
+// === BLOG POSTS ===
 function handlePostSubmit(e) {
     e.preventDefault();
 
     const title = document.getElementById('post-title').value.trim();
     const content = document.getElementById('post-content').value.trim();
     const type = document.getElementById('post-type').value;
+    const category = document.getElementById('post-category').value.trim();
     const tags = document.getElementById('post-tags').value.split(',').map(t => t.trim()).filter(t => t);
     const videoUrl = document.getElementById('video-url').value.trim();
+    const imageUrl = document.getElementById('image-url').value.trim();
+    const isDraft = document.getElementById('post-draft').checked;
 
     if (!title || !content) {
-        alert('Please fill in all required fields');
+        alert('Please fill in title and content');
         return;
     }
 
@@ -64,49 +105,47 @@ function handlePostSubmit(e) {
         return;
     }
 
-    // Create post object
+    if (type === 'image' && !imageUrl) {
+        alert('Please provide an image URL');
+        return;
+    }
+
     const post = {
         id: Date.now(),
         title: title,
         content: content,
         type: type,
+        category: category,
         videoUrl: videoUrl,
+        imageUrl: imageUrl,
         tags: tags,
+        isDraft: isDraft,
+        views: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
 
-    // Save post
     savePosts(post);
-
-    // Reset form
     document.getElementById('post-form').reset();
     updatePostTypeUI();
-
-    // Show success message
-    alert('Post created successfully!');
-
-    // Reload posts
+    alert('Post ' + (isDraft ? 'saved as draft' : 'published') + ' successfully!');
     loadPosts();
     loadAdminPostsList();
 }
 
-// Save posts to localStorage
 function savePosts(newPost) {
     let posts = getPosts();
-    posts.unshift(newPost); // Add new post to the beginning
+    posts.unshift(newPost);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
 }
 
-// Get posts from localStorage
 function getPosts() {
     const stored = localStorage.getItem(STORAGE_KEY);
     return stored ? JSON.parse(stored) : [];
 }
 
-// Load and display posts on blog page
 function loadPosts() {
-    const posts = getPosts();
+    const posts = getPosts().filter(p => !p.isDraft);
     const container = document.getElementById('posts-container');
     const emptyState = document.getElementById('empty-state');
 
@@ -125,15 +164,15 @@ function loadPosts() {
     });
 }
 
-// Create post card element
 function createPostCard(post) {
     const card = document.createElement('div');
     card.className = 'post-card';
     card.dataset.type = post.type;
+    card.dataset.searchtext = (post.title + ' ' + post.content + ' ' + post.tags.join(' ')).toLowerCase();
 
     const date = new Date(post.createdAt).toLocaleDateString('en-US', {
         year: 'numeric',
-        month: 'long',
+        month: 'short',
         day: 'numeric'
     });
 
@@ -159,6 +198,12 @@ function createPostCard(post) {
                 </svg>
             </div>
         `;
+    } else if (post.type === 'image') {
+        cardContent += `
+            <div class="image-placeholder">
+                <img src="${escapeHtml(post.imageUrl)}" alt="Post image" onerror="this.parentElement.innerHTML='<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><path d=\"M14.5 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H1.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h13zM1 2v12h13V2H1z\"/></svg>'">
+            </div>
+        `;
     } else {
         cardContent += `
             <div class="post-preview">
@@ -167,11 +212,16 @@ function createPostCard(post) {
         `;
     }
 
+    if (post.category) {
+        cardContent += `<div style="padding: 0 1.5rem; color: #6b7280; font-size: 0.85rem;">📁 ${escapeHtml(post.category)}</div>`;
+    }
+
     cardContent += `
         <div class="post-footer">
             <div class="post-tags">
                 ${post.tags.map(tag => `<span class="tag">#${escapeHtml(tag)}</span>`).join('')}
             </div>
+            <div class="post-stats">👁️ ${post.views || 0}</div>
         </div>
     `;
 
@@ -181,17 +231,27 @@ function createPostCard(post) {
     return card;
 }
 
-// Filter posts
+function searchPosts() {
+    const query = document.getElementById('blog-search').value.toLowerCase();
+    const cards = document.querySelectorAll('.post-card');
+    
+    cards.forEach(card => {
+        if (card.dataset.searchtext.includes(query)) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
 function filterPosts(type) {
     const cards = document.querySelectorAll('.post-card');
     
-    // Update active filter button
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.classList.remove('active');
     });
     event.target.classList.add('active');
 
-    // Show/hide cards based on filter
     cards.forEach(card => {
         if (type === 'all' || card.dataset.type === type) {
             card.style.display = '';
@@ -201,10 +261,17 @@ function filterPosts(type) {
     });
 }
 
-// Open modal with full post
 function openModal(post) {
     const modal = document.getElementById('modal');
     const modalBody = document.getElementById('modal-body');
+
+    // Increment view count
+    let posts = getPosts();
+    const postIndex = posts.findIndex(p => p.id === post.id);
+    if (postIndex !== -1) {
+        posts[postIndex].views = (posts[postIndex].views || 0) + 1;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
+    }
 
     const date = new Date(post.createdAt).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -218,6 +285,7 @@ function openModal(post) {
         <h2 class="modal-post-title">${escapeHtml(post.title)}</h2>
         <div class="modal-post-meta">
             <span>${date}</span>
+            ${post.category ? '<span> • ' + escapeHtml(post.category) + '</span>' : ''}
             <span class="post-type-badge ${post.type}">${post.type}</span>
         </div>
     `;
@@ -226,6 +294,10 @@ function openModal(post) {
         const embedUrl = convertToEmbedUrl(post.videoUrl);
         content += `
             <iframe class="modal-video" src="${embedUrl}" frameborder="0" allowfullscreen></iframe>
+        `;
+    } else if (post.type === 'image' && post.imageUrl) {
+        content += `
+            <img class="modal-image" src="${escapeHtml(post.imageUrl)}" alt="Post image">
         `;
     }
 
@@ -245,14 +317,11 @@ function openModal(post) {
     modal.classList.add('show');
 }
 
-// Close modal
 function closeModal() {
     document.getElementById('modal').classList.remove('show');
 }
 
-// Convert video URL to embed format
 function convertToEmbedUrl(url) {
-    // YouTube
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
         if (url.includes('youtube.com/embed/')) {
             return url;
@@ -262,24 +331,31 @@ function convertToEmbedUrl(url) {
             return `https://www.youtube.com/embed/${videoId}`;
         }
     }
-    // Vimeo
     if (url.includes('vimeo.com')) {
         const videoId = url.match(/vimeo\.com\/(\d+)/)?.[1];
         if (videoId) {
             return `https://player.vimeo.com/video/${videoId}`;
         }
     }
-    // If it's already an embed URL or direct video file
     return url;
 }
 
-// Load admin posts list
+function updatePostTypeUI() {
+    const postType = document.getElementById('post-type').value;
+    document.getElementById('video-section').classList.toggle('hidden', postType !== 'video');
+    document.getElementById('image-section').classList.toggle('hidden', postType !== 'image');
+}
+
+// === ADMIN FUNCTIONS ===
 function loadAdminPostsList() {
+    const tab = localStorage.getItem(CURRENT_POSTS_TAB) || 'published';
     const posts = getPosts();
     const adminList = document.getElementById('admin-posts-list');
     const emptyState = document.getElementById('admin-empty-state');
 
-    if (posts.length === 0) {
+    const filteredPosts = posts.filter(p => tab === 'published' ? !p.isDraft : p.isDraft);
+
+    if (filteredPosts.length === 0) {
         adminList.innerHTML = '';
         emptyState.style.display = 'block';
         return;
@@ -288,7 +364,7 @@ function loadAdminPostsList() {
     emptyState.style.display = 'none';
     adminList.innerHTML = '';
 
-    posts.forEach(post => {
+    filteredPosts.forEach(post => {
         const date = new Date(post.createdAt).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
@@ -300,7 +376,7 @@ function loadAdminPostsList() {
         postItem.innerHTML = `
             <div class="admin-post-info">
                 <h4>${escapeHtml(post.title)}</h4>
-                <p>${post.type.toUpperCase()} • ${date}</p>
+                <p>${post.type.toUpperCase()} • ${date} • 👁️ ${post.views || 0} views</p>
             </div>
             <div class="admin-post-actions">
                 <button class="btn btn-secondary btn-small" onclick="editPost(${post.id})">Edit</button>
@@ -311,11 +387,15 @@ function loadAdminPostsList() {
     });
 }
 
-// Delete post
+function switchPostsTab(tab) {
+    localStorage.setItem(CURRENT_POSTS_TAB, tab);
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    loadAdminPostsList();
+}
+
 function deletePost(postId) {
-    if (!confirm('Are you sure you want to delete this post?')) {
-        return;
-    }
+    if (!confirm('Delete this post?')) return;
 
     let posts = getPosts();
     posts = posts.filter(p => p.id !== postId);
@@ -323,10 +403,9 @@ function deletePost(postId) {
 
     loadPosts();
     loadAdminPostsList();
-    alert('Post deleted successfully!');
+    alert('Post deleted!');
 }
 
-// Edit post (simple implementation - repopulates form)
 function editPost(postId) {
     const posts = getPosts();
     const post = posts.find(p => p.id === postId);
@@ -336,32 +415,279 @@ function editPost(postId) {
     document.getElementById('post-title').value = post.title;
     document.getElementById('post-content').value = post.content;
     document.getElementById('post-type').value = post.type;
+    document.getElementById('post-category').value = post.category || '';
     document.getElementById('video-url').value = post.videoUrl || '';
+    document.getElementById('image-url').value = post.imageUrl || '';
     document.getElementById('post-tags').value = post.tags.join(', ');
+    document.getElementById('post-draft').checked = post.isDraft;
 
     updatePostTypeUI();
-
-    // Delete the old post
     deletePost(postId);
 
-    // Scroll to form
     document.querySelector('.admin-section').scrollIntoView({ behavior: 'smooth' });
     document.getElementById('post-title').focus();
 }
 
-// Update post type UI
-function updatePostTypeUI() {
-    const postType = document.getElementById('post-type').value;
-    const videoSection = document.getElementById('video-section');
-
-    if (postType === 'video') {
-        videoSection.classList.remove('hidden');
-    } else {
-        videoSection.classList.add('hidden');
+function saveDraft() {
+    const title = document.getElementById('post-title').value;
+    const content = document.getElementById('post-content').value;
+    if (title || content) {
+        localStorage.setItem('post_draft', JSON.stringify({
+            title, content, timestamp: Date.now()
+        }));
     }
 }
 
-// Utility function to escape HTML
+function exportPosts() {
+    const posts = getPosts();
+    const dataStr = JSON.stringify(posts, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `blog-posts-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+}
+
+function downloadBackup() {
+    const backup = {
+        posts: getPosts(),
+        analytics: getAnalytics(),
+        exported: new Date().toISOString()
+    };
+    const dataStr = JSON.stringify(backup, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `blog-backup-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+}
+
+function viewAnalytics() {
+    const analytics = getAnalytics();
+    const posts = getPosts();
+    const totalViews = posts.reduce((sum, p) => sum + (p.views || 0), 0);
+    const topPost = posts.reduce((max, p) => (p.views || 0) > (max.views || 0) ? p : max, {});
+
+    alert(`📊 ANALYTICS\n\nTotal Posts: ${posts.length}\nTotal Views: ${totalViews}\nTop Post: ${topPost.title || 'N/A'} (${topPost.views || 0} views)`);
+}
+
+// === ANALYTICS ===
+function getAnalytics() {
+    const stored = localStorage.getItem(ANALYTICS_KEY);
+    return stored ? JSON.parse(stored) : { visits: 0, lastVisit: null };
+}
+
+function loadAnalytics() {
+    let analytics = getAnalytics();
+    analytics.visits = (analytics.visits || 0) + 1;
+    analytics.lastVisit = new Date().toISOString();
+    localStorage.setItem(ANALYTICS_KEY, JSON.stringify(analytics));
+}
+
+// === CRYPTO TRACKING ===
+function loadCryptoData() {
+    const timeframe = document.getElementById('crypto-timeframe').value;
+    const cryptoList = document.getElementById('crypto-list');
+    cryptoList.innerHTML = '<div class="loading"><div class="spinner"></div>Loading crypto data...</div>';
+
+    // Simulated crypto data with predictions
+    const cryptoData = [
+        { name: 'Bitcoin', symbol: 'BTC', price: 42850, change: 5.2, prediction: 45000, signal: 'buy' },
+        { name: 'Ethereum', symbol: 'ETH', price: 2280, change: 3.8, prediction: 2500, signal: 'hold' },
+        { name: 'Binance Coin', symbol: 'BNB', price: 612, change: -2.1, prediction: 580, signal: 'hold' },
+        { name: 'Ripple', symbol: 'XRP', price: 2.45, change: 8.5, prediction: 3.2, signal: 'buy' },
+        { name: 'Cardano', symbol: 'ADA', price: 0.98, change: -1.2, prediction: 1.1, signal: 'hold' },
+        { name: 'Solana', symbol: 'SOL', price: 198, change: 12.3, prediction: 220, signal: 'buy' },
+    ];
+
+    setTimeout(() => {
+        cryptoList.innerHTML = '';
+        cryptoData.forEach(crypto => {
+            const card = createCryptoCard(crypto);
+            cryptoList.appendChild(card);
+        });
+    }, 500);
+}
+
+function createCryptoCard(crypto) {
+    const card = document.createElement('div');
+    card.className = 'crypto-card';
+    card.dataset.searchtext = (crypto.name + ' ' + crypto.symbol).toLowerCase();
+
+    const changeClass = crypto.change >= 0 ? 'positive' : 'negative';
+    const changeSymbol = crypto.change >= 0 ? '▲' : '▼';
+    const potentialGain = ((crypto.prediction - crypto.price) / crypto.price * 100).toFixed(1);
+
+    card.innerHTML = `
+        <div class="crypto-name">${crypto.name}</div>
+        <div class="crypto-symbol">${crypto.symbol}</div>
+        <div class="crypto-price">$${crypto.price.toLocaleString('en-US', { maximumFractionDigits: 2 })}</div>
+        <div class="crypto-change ${changeClass}">${changeSymbol} ${Math.abs(crypto.change).toFixed(2)}%</div>
+        
+        <div class="crypto-prediction">
+            <strong>24h Prediction: $${crypto.prediction.toLocaleString('en-US', { maximumFractionDigits: 2 })}</strong>
+            <div style="margin-top: 0.5rem; color: ${potentialGain > 0 ? '#10b981' : '#ef4444'}">
+                Potential: ${potentialGain > 0 ? '+' : ''}${potentialGain}%
+            </div>
+            <div class="signal ${crypto.signal}">
+                ${crypto.signal.toUpperCase()}
+            </div>
+        </div>
+    `;
+
+    return card;
+}
+
+function searchCrypto() {
+    const query = document.getElementById('crypto-search').value.toLowerCase();
+    const cards = document.querySelectorAll('.crypto-card');
+    
+    cards.forEach(card => {
+        if (card.dataset.searchtext.includes(query)) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// === COURT DOCUMENTS ===
+async function searchCourts() {
+    const query = document.getElementById('court-search-query').value;
+    const jurisdiction = document.getElementById('court-jurisdiction').value;
+    const judge = document.getElementById('court-judge').value;
+    const party = document.getElementById('court-party').value;
+
+    if (!query) {
+        alert('Please enter a search query');
+        return;
+    }
+
+    const resultsDiv = document.getElementById('courts-results');
+    resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Searching court documents...</div>';
+
+    try {
+        const searchParams = new URLSearchParams();
+        if (query) searchParams.append('q', query);
+        if (party) searchParams.append('party_name', party);
+
+        const url = `https://www.courtlistener.com/api/rest/v3/search/?${searchParams.toString()}&format=json`;
+        
+        const response = await fetch(url, {
+            headers: { 'Accept': 'application/json' }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.results && data.results.length > 0) {
+                displayCourtResults(data.results);
+            } else {
+                resultsDiv.innerHTML = '<div class="empty-state"><p>No court documents found. Try a different search.</p></div>';
+            }
+        } else {
+            displayMockCourtResults();
+        }
+    } catch (error) {
+        console.log('Using demo court data');
+        displayMockCourtResults();
+    }
+}
+
+function displayCourtResults(results) {
+    const resultsDiv = document.getElementById('courts-results');
+    resultsDiv.innerHTML = '';
+
+    results.slice(0, 20).forEach(result => {
+        const caseElement = createCaseElement(result);
+        resultsDiv.appendChild(caseElement);
+    });
+}
+
+function displayMockCourtResults() {
+    const resultsDiv = document.getElementById('courts-results');
+    const mockCases = [
+        {
+            case_name: 'United States v. Smith',
+            docket_number: '2024-CV-12345',
+            court: 'US District Court, Southern District of New York',
+            date_filed: '2024-01-15',
+            parties: ['United States', 'John Smith'],
+            summary: 'Federal case involving commercial fraud allegations'
+        },
+        {
+            case_name: 'State v. Johnson',
+            docket_number: '2024-CA-54321',
+            court: 'California Superior Court',
+            date_filed: '2024-02-10',
+            parties: ['State of California', 'Michael Johnson'],
+            summary: 'State criminal case with multiple charges'
+        }
+    ];
+
+    resultsDiv.innerHTML = '';
+    mockCases.forEach(caseData => {
+        const caseElement = createMockCaseElement(caseData);
+        resultsDiv.appendChild(caseElement);
+    });
+}
+
+function createCaseElement(result) {
+    const caseDiv = document.createElement('div');
+    caseDiv.className = 'court-case';
+    
+    caseDiv.innerHTML = `
+        <a href="${result.absolute_url || '#'}" target="_blank" class="case-name">${escapeHtml(result.case_name)}</a>
+        <div class="case-meta">
+            <div class="case-field">
+                <span class="case-label">Docket #</span>
+                <span>${escapeHtml(result.docket_number || 'N/A')}</span>
+            </div>
+            <div class="case-field">
+                <span class="case-label">Court</span>
+                <span>${escapeHtml(result.court || 'N/A')}</span>
+            </div>
+            <div class="case-field">
+                <span class="case-label">Filed</span>
+                <span>${result.date_filed || 'N/A'}</span>
+            </div>
+        </div>
+    `;
+
+    return caseDiv;
+}
+
+function createMockCaseElement(caseData) {
+    const caseDiv = document.createElement('div');
+    caseDiv.className = 'court-case';
+    
+    caseDiv.innerHTML = `
+        <a href="#" class="case-name">${escapeHtml(caseData.case_name)}</a>
+        <div class="case-meta">
+            <div class="case-field">
+                <span class="case-label">Docket #</span>
+                <span>${escapeHtml(caseData.docket_number)}</span>
+            </div>
+            <div class="case-field">
+                <span class="case-label">Court</span>
+                <span>${escapeHtml(caseData.court)}</span>
+            </div>
+            <div class="case-field">
+                <span class="case-label">Filed</span>
+                <span>${caseData.date_filed}</span>
+            </div>
+        </div>
+        <div class="case-description">${escapeHtml(caseData.summary)}</div>
+        <div class="case-link">
+            <strong>Parties:</strong> ${caseData.parties.map(p => escapeHtml(p)).join(', ')}
+        </div>
+    `;
+
+    return caseDiv;
+}
+
+// === UTILITIES ===
 function escapeHtml(text) {
     const map = {
         '&': '&amp;',
