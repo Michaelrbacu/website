@@ -3,10 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Michael's Blog</title>
+    <title>Michael's Hub</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Rotating Space Background Hero -->
+    <div class="space-hero">
+        <div class="space-carousel">
+            <div id="space-images-container" class="space-images-container">
+                <!-- Space images will rotate here -->
+            </div>
+            <div class="space-overlay"></div>
+            <div class="space-content">
+                <h2>Explore the Cosmos</h2>
+                <p id="space-title">Loading NASA imagery...</p>
+                <div class="space-nav">
+                    <button onclick="previousSpace()" class="space-btn">← Previous</button>
+                    <button onclick="nextSpace()" class="space-btn">Next →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <header>
         <div class="header-content">
             <div class="header-top">

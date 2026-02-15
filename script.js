@@ -7,6 +7,15 @@ const CURRENT_POSTS_TAB = 'current_posts_tab';
 // CourtListener API
 const COURTLISTENER_API = 'https://www.courtlistener.com/api/rest/v3';
 
+// NASA API
+const NASA_API_KEY = 'DEMO_KEY';
+const NASA_APOD_API = 'https://api.nasa.gov/planetary/apod';
+
+// Space background variables
+let spaceImages = [];
+let currentSpaceIndex = 0;
+let spaceAutoRotateInterval = null;
+
 // Initialize the blog
 document.addEventListener('DOMContentLoaded', function() {
     loadPosts();
@@ -15,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAnalytics();
     loadCryptoData(); // Load crypto data on startup
     loadDefaultCourts(); // Load default court results on startup
+    loadSpaceImages(); // Load NASA space images
 });
 
 // Setup event listeners
@@ -62,6 +72,151 @@ function toggleTheme() {
     const isDark = document.body.classList.contains('dark-mode');
     localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
     document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+}
+
+// === SPACE BACKGROUND IMAGES (NASA) ===
+async function loadSpaceImages() {
+    try {
+        // Fetch multiple days of NASA APOD images
+        const container = document.getElementById('space-images-container');
+        const dates = [];
+        
+        // Get last 10 days of imagery
+        for (let i = 0; i < 10; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            dates.push(dateStr);
+        }
+
+        // Fetch images in parallel
+        const promises = dates.map(date =>
+            fetch(`${NASA_APOD_API}?api_key=${NASA_API_KEY}&date=${date}&thumbs=true`)
+                .then(res => res.json())
+                .catch(err => null)
+        );
+
+        const responses = await Promise.all(promises);
+        
+        // Filter valid responses and images with hdurl
+        spaceImages = responses
+            .filter(r => r && r.url && r.title)
+            .map(r => ({
+                url: r.hdurl || r.url,
+                title: r.title,
+                explanation: r.explanation
+            }))
+            .slice(0, 8); // Use top 8 images
+
+        // If API fails or limited, use fallback space images
+        if (spaceImages.length === 0) {
+            spaceImages = [
+                {
+                    url: 'https://images.unsplash.com/photo-1446776653964-20c1d3a81b06?w=1200&h=600&fit=crop',
+                    title: 'Galaxy Exploration',
+                    explanation: 'Deep space imagery exploring distant galaxies and cosmic wonders'
+                },
+                {
+                    url: 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1200&h=600&fit=crop',
+                    title: 'Cosmic Universe',
+                    explanation: 'Vast cosmic landscapes beyond our atmosphere'
+                },
+                {
+                    url: 'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1200&h=600&fit=crop',
+                    title: 'Space Nebula',
+                    explanation: 'Beautiful nebula formations in deep space'
+                },
+                {
+                    url: 'https://images.unsplash.com/photo-1436262174933-eb871dce4c2e?w=1200&h=600&fit=crop',
+                    title: 'Stellar Objects',
+                    explanation: 'Magnificent stars and celestial objects'
+                },
+                {
+                    url: 'https://images.unsplash.com/photo-1564053489984-317bde4340e7?w=1200&h=600&fit=crop',
+                    title: 'Cosmic Rays',
+                    explanation: 'Cosmic phenomena lighting up the night sky'
+                },
+                {
+                    url: 'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1200&h=600&fit=crop',
+                    title: 'Space Wonder',
+                    explanation: 'Exploring the infinite cosmos'
+                },
+                {
+                    url: 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1200&h=600&fit=crop',
+                    title: 'Universe Exploration',
+                    explanation: 'Journey through the depths of space'
+                },
+                {
+                    url: 'https://images.unsplash.com/photo-1446776877081-d282a0f896e2?w=1200&h=600&fit=crop',
+                    title: 'Astronomical Wonders',
+                    explanation: 'Witnessing the marvels of the universe'
+                }
+            ];
+        }
+
+        // Render space images
+        container.innerHTML = '';
+        spaceImages.forEach((img, idx) => {
+            const div = document.createElement('div');
+            div.className = `space-image ${idx === 0 ? 'active' : ''}`;
+            div.style.backgroundImage = `url('${img.url}')`;
+            div.title = img.title;
+            container.appendChild(div);
+        });
+
+        // Update title
+        if (spaceImages.length > 0) {
+            updateSpaceTitle();
+        }
+
+        // Auto-rotate space images
+        startSpaceAutoRotate();
+
+    } catch (err) {
+        console.log('Space images loading with fallback');
+        loadSpaceImages(); // This will trigger fallback
+    }
+}
+
+function updateSpaceTitle() {
+    const titleEl = document.getElementById('space-title');
+    if (titleEl && spaceImages[currentSpaceIndex]) {
+        titleEl.textContent = spaceImages[currentSpaceIndex].title;
+    }
+}
+
+function nextSpace() {
+    const images = document.querySelectorAll('.space-image');
+    if (images.length === 0) return;
+
+    images[currentSpaceIndex].classList.remove('active');
+    currentSpaceIndex = (currentSpaceIndex + 1) % images.length;
+    images[currentSpaceIndex].classList.add('active');
+    updateSpaceTitle();
+    
+    // Reset auto-rotate timer
+    clearInterval(spaceAutoRotateInterval);
+    startSpaceAutoRotate();
+}
+
+function previousSpace() {
+    const images = document.querySelectorAll('.space-image');
+    if (images.length === 0) return;
+
+    images[currentSpaceIndex].classList.remove('active');
+    currentSpaceIndex = (currentSpaceIndex - 1 + images.length) % images.length;
+    images[currentSpaceIndex].classList.add('active');
+    updateSpaceTitle();
+    
+    // Reset auto-rotate timer
+    clearInterval(spaceAutoRotateInterval);
+    startSpaceAutoRotate();
+}
+
+function startSpaceAutoRotate() {
+    spaceAutoRotateInterval = setInterval(() => {
+        nextSpace();
+    }, 8000); // Change image every 8 seconds
 }
 
 // === PAGE NAVIGATION ===
