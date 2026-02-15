@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     initTheme();
     loadAnalytics();
+    loadCryptoData(); // Load crypto data on startup
+    loadDefaultCourts(); // Load default court results on startup
 });
 
 // Setup event listeners
@@ -168,6 +170,7 @@ function createPostCard(post) {
     const card = document.createElement('div');
     card.className = 'post-card';
     card.dataset.type = post.type;
+    card.dataset.views = post.views || 0;
     card.dataset.searchtext = (post.title + ' ' + post.content + ' ' + post.tags.join(' ')).toLowerCase();
 
     const date = new Date(post.createdAt).toLocaleDateString('en-US', {
@@ -258,6 +261,24 @@ function filterPosts(type) {
         } else {
             card.style.display = 'none';
         }
+    });
+}
+
+function sortPostsByViews() {
+    const container = document.getElementById('posts-container');
+    const cards = Array.from(document.querySelectorAll('.post-card'));
+    
+    // Sort by view count (from data attribute)
+    cards.sort((a, b) => {
+        const viewsA = parseInt(a.dataset.views || 0);
+        const viewsB = parseInt(b.dataset.views || 0);
+        return viewsB - viewsA;
+    });
+    
+    // Clear and re-add sorted cards
+    container.innerHTML = '';
+    cards.forEach(card => {
+        container.appendChild(card);
     });
 }
 
@@ -488,27 +509,26 @@ function loadAnalytics() {
 
 // === CRYPTO TRACKING ===
 function loadCryptoData() {
-    const timeframe = document.getElementById('crypto-timeframe').value;
+    const timeframe = document.getElementById('crypto-timeframe')?.value || '1y';
     const cryptoList = document.getElementById('crypto-list');
-    cryptoList.innerHTML = '<div class="loading"><div class="spinner"></div>Loading crypto data...</div>';
+    
+    if (!cryptoList) return; // If page not ready yet, skip
 
-    // Simulated crypto data with predictions
+    // Simulated crypto data with predictions (sorted by potential gain)
     const cryptoData = [
+        { name: 'Solana', symbol: 'SOL', price: 198, change: 12.3, prediction: 220, signal: 'buy' },
+        { name: 'Ripple', symbol: 'XRP', price: 2.45, change: 8.5, prediction: 3.2, signal: 'buy' },
         { name: 'Bitcoin', symbol: 'BTC', price: 42850, change: 5.2, prediction: 45000, signal: 'buy' },
         { name: 'Ethereum', symbol: 'ETH', price: 2280, change: 3.8, prediction: 2500, signal: 'hold' },
         { name: 'Binance Coin', symbol: 'BNB', price: 612, change: -2.1, prediction: 580, signal: 'hold' },
-        { name: 'Ripple', symbol: 'XRP', price: 2.45, change: 8.5, prediction: 3.2, signal: 'buy' },
         { name: 'Cardano', symbol: 'ADA', price: 0.98, change: -1.2, prediction: 1.1, signal: 'hold' },
-        { name: 'Solana', symbol: 'SOL', price: 198, change: 12.3, prediction: 220, signal: 'buy' },
     ];
 
-    setTimeout(() => {
-        cryptoList.innerHTML = '';
-        cryptoData.forEach(crypto => {
-            const card = createCryptoCard(crypto);
-            cryptoList.appendChild(card);
-        });
-    }, 500);
+    cryptoList.innerHTML = '';
+    cryptoData.forEach(crypto => {
+        const card = createCryptoCard(crypto);
+        cryptoList.appendChild(card);
+    });
 }
 
 function createCryptoCard(crypto) {
@@ -614,7 +634,7 @@ function displayMockCourtResults() {
             court: 'US District Court, Southern District of New York',
             date_filed: '2024-01-15',
             parties: ['United States', 'John Smith'],
-            summary: 'Federal case involving commercial fraud allegations'
+            summary: 'Federal case involving commercial fraud allegations. Complex litigation over interstate commerce violations.'
         },
         {
             case_name: 'State v. Johnson',
@@ -622,7 +642,31 @@ function displayMockCourtResults() {
             court: 'California Superior Court',
             date_filed: '2024-02-10',
             parties: ['State of California', 'Michael Johnson'],
-            summary: 'State criminal case with multiple charges'
+            summary: 'State criminal case with multiple charges. High-profile case with significant media attention.'
+        },
+        {
+            case_name: 'Federal Trade Commission v. TechCorp Inc.',
+            docket_number: '2024-FTCU-8901',
+            court: 'US District Court, Northern District of California',
+            date_filed: '2024-01-20',
+            parties: ['Federal Trade Commission', 'TechCorp Inc.'],
+            summary: 'Antitrust case involving alleged monopolistic practices in the technology sector.'
+        },
+        {
+            case_name: 'New York State v. Environmental Enterprises',
+            docket_number: '2024-NY-45678',
+            court: 'New York Court of Appeals',
+            date_filed: '2023-11-05',
+            parties: ['State of New York', 'Environmental Enterprises LLC'],
+            summary: 'Environmental litigation concerning pollution violations and EPA compliance standards.'
+        },
+        {
+            case_name: 'Securities & Exchange Commission v. Investment Holdings',
+            docket_number: '2024-SEC-2234',
+            court: 'US District Court, Southern District of Texas',
+            date_filed: '2024-01-10',
+            parties: ['Securities & Exchange Commission', 'Investment Holdings Group'],
+            summary: 'Securities fraud case involving misrepresentation of financial assets and insider trading.'
         }
     ];
 
@@ -631,6 +675,13 @@ function displayMockCourtResults() {
         const caseElement = createMockCaseElement(caseData);
         resultsDiv.appendChild(caseElement);
     });
+}
+
+function loadDefaultCourts() {
+    const resultsDiv = document.getElementById('courts-results');
+    if (resultsDiv) {
+        displayMockCourtResults();
+    }
 }
 
 function createCaseElement(result) {
