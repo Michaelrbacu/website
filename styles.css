@@ -617,6 +617,11 @@ body.dark-mode .modal-content {
     margin-bottom: 1rem;
 }
 
+#priceChart {
+    max-width: 100%;
+    margin: 2rem 0;
+}
+
 /* Crypto Page */
 .crypto-container {
     background: white;
@@ -636,6 +641,13 @@ body.dark-mode .crypto-container {
 .crypto-header h2 {
     margin-bottom: 1rem;
     color: var(--text-color);
+}
+
+.help-text {
+    font-size: 0.95rem;
+    color: #6b7280;
+    margin-bottom: 1rem;
+    font-style: italic;
 }
 
 .crypto-controls {
@@ -679,6 +691,8 @@ body.dark-mode .crypto-card {
 
 .crypto-card:hover {
     box-shadow: var(--shadow-lg);
+    cursor: pointer;
+    transform: translateY(-2px);
 }
 
 .crypto-name {

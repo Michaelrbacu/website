@@ -152,8 +152,9 @@
         <section class="crypto-container">
             <div class="crypto-header">
                 <h2>Crypto Tracker & Predictions</h2>
+                <p class="help-text">💹 Click any coin to see its price chart. Type to search: "Bitcoin", "Ethereum", etc.</p>
                 <div class="crypto-controls">
-                    <input type="text" id="crypto-search" placeholder="Search coins...">
+                    <input type="text" id="crypto-search" placeholder="Search coins: Bitcoin, Ethereum...">
                     <select id="crypto-timeframe" onchange="loadCryptoData()">
                         <option value="1d">1 Day</option>
                         <option value="7d">7 Days</option>
@@ -165,6 +166,13 @@
             <div id="crypto-list" class="crypto-grid">
                 <!-- Crypto cards will be loaded here -->
             </div>
+            <div id="crypto-chart-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeCryptoChart()">&times;</span>
+                    <h3 id="chart-title"></h3>
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
         </section>
     </div>
 
@@ -173,10 +181,11 @@
         <section class="courts-container">
             <div class="courts-header">
                 <h2>Court Documents Search</h2>
+                <p class="help-text">🔍 Search federal & state court cases. Try: "fraud", "securities", "antitrust", or any company/person name</p>
             </div>
             <div class="courts-search">
                 <div class="search-controls">
-                    <input type="text" id="court-search-query" placeholder="Case name, party name, docket #...">
+                    <input type="text" id="court-search-query" placeholder="e.g., 'fraud', 'Apple Inc.', 'environmental', 'SEC'">
                     <select id="court-jurisdiction">
                         <option value="">All Jurisdictions</option>
                         <option value="scotus">U.S. Supreme Court</option>
@@ -187,14 +196,55 @@
                             <option value="AZ">Arizona</option>
                             <option value="AR">Arkansas</option>
                             <option value="CA">California</option>
-                            <!-- Add all states -->
+                            <option value="CO">Colorado</option>
+                            <option value="CT">Connecticut</option>
+                            <option value="DE">Delaware</option>
+                            <option value="FL">Florida</option>
+                            <option value="GA">Georgia</option>
+                            <option value="HI">Hawaii</option>
+                            <option value="ID">Idaho</option>
+                            <option value="IL">Illinois</option>
+                            <option value="IN">Indiana</option>
+                            <option value="IA">Iowa</option>
+                            <option value="KS">Kansas</option>
+                            <option value="KY">Kentucky</option>
+                            <option value="LA">Louisiana</option>
+                            <option value="ME">Maine</option>
+                            <option value="MD">Maryland</option>
+                            <option value="MA">Massachusetts</option>
+                            <option value="MI">Michigan</option>
+                            <option value="MN">Minnesota</option>
+                            <option value="MS">Mississippi</option>
+                            <option value="MO">Missouri</option>
+                            <option value="MT">Montana</option>
+                            <option value="NE">Nebraska</option>
+                            <option value="NV">Nevada</option>
+                            <option value="NH">New Hampshire</option>
+                            <option value="NJ">New Jersey</option>
+                            <option value="NM">New Mexico</option>
                             <option value="NY">New York</option>
+                            <option value="NC">North Carolina</option>
+                            <option value="ND">North Dakota</option>
+                            <option value="OH">Ohio</option>
+                            <option value="OK">Oklahoma</option>
+                            <option value="OR">Oregon</option>
+                            <option value="PA">Pennsylvania</option>
+                            <option value="RI">Rhode Island</option>
+                            <option value="SC">South Carolina</option>
+                            <option value="SD">South Dakota</option>
+                            <option value="TN">Tennessee</option>
                             <option value="TX">Texas</option>
-                            <!-- ... etc -->
+                            <option value="UT">Utah</option>
+                            <option value="VT">Vermont</option>
+                            <option value="VA">Virginia</option>
+                            <option value="WA">Washington</option>
+                            <option value="WV">West Virginia</option>
+                            <option value="WI">Wisconsin</option>
+                            <option value="WY">Wyoming</option>
                         </optgroup>
                     </select>
                     <input type="text" id="court-judge" placeholder="Judge name (optional)">
-                    <input type="text" id="court-party" placeholder="Defendant/Plaintiff (optional)">
+                    <input type="text" id="court-party" placeholder="Defendant/Plaintiff name (optional)">
                     <button class="btn btn-primary" onclick="searchCourts()">Search</button>
                 </div>
             </div>
@@ -204,6 +254,7 @@
         </section>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

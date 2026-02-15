@@ -554,8 +554,11 @@ function createCryptoCard(crypto) {
             <div class="signal ${crypto.signal}">
                 ${crypto.signal.toUpperCase()}
             </div>
+            <small style="display: block; margin-top: 1rem; color: #6b7280;">👆 Click to view chart</small>
         </div>
     `;
+
+    card.addEventListener('click', () => showCryptoChart(crypto));
 
     return card;
 }
@@ -736,6 +739,130 @@ function createMockCaseElement(caseData) {
     `;
 
     return caseDiv;
+}
+
+// === CRYPTO CHARTS ===
+let cryptoChart = null;
+
+function showCryptoChart(crypto) {
+    const modal = document.getElementById('crypto-chart-modal');
+    const title = document.getElementById('chart-title');
+    
+    title.textContent = `${crypto.name} (${crypto.symbol}) - Price Chart`;
+    modal.classList.add('show');
+
+    // Generate simulated historical data
+    const days = document.getElementById('crypto-timeframe').value === '1d' ? 24 : 
+                 document.getElementById('crypto-timeframe').value === '7d' ? 7 : 
+                 document.getElementById('crypto-timeframe').value === '30d' ? 30 : 365;
+    
+    const historicalData = generateHistoricalData(crypto.price, days);
+    const labels = generateLabels(days);
+
+    // Destroy existing chart if any
+    if (cryptoChart) {
+        cryptoChart.destroy();
+    }
+
+    const ctx = document.getElementById('priceChart').getContext('2d');
+    const minPrice = Math.min(...historicalData);
+    const maxPrice = Math.max(...historicalData);
+    
+    cryptoChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: `${crypto.symbol} Price (USD)`,
+                data: historicalData,
+                borderColor: crypto.change >= 0 ? '#10b981' : '#ef4444',
+                backgroundColor: crypto.change >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: {
+                        color: document.body.classList.contains('dark-mode') ? '#f3f4f6' : '#1f2937',
+                        font: { size: 12 }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    min: minPrice * 0.95,
+                    max: maxPrice * 1.05,
+                    ticks: {
+                        color: document.body.classList.contains('dark-mode') ? '#9ca3af' : '#6b7280',
+                        callback: function(value) {
+                            return '$' + value.toFixed(2);
+                        }
+                    },
+                    grid: {
+                        color: document.body.classList.contains('dark-mode') ? '#374151' : '#e5e7eb'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: document.body.classList.contains('dark-mode') ? '#9ca3af' : '#6b7280'
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+function generateHistoricalData(currentPrice, days) {
+    const data = [];
+    let price = currentPrice * 0.7; // Start 30% lower
+    
+    for (let i = 0; i < days; i++) {
+        // Random walk with slight upward trend
+        const change = (Math.random() - 0.45) * (currentPrice * 0.05);
+        price = Math.max(price + change, currentPrice * 0.5);
+        data.push(parseFloat(price.toFixed(2)));
+    }
+    
+    // Ensure last point is current price
+    data[data.length - 1] = currentPrice;
+    return data;
+}
+
+function generateLabels(days) {
+    const labels = [];
+    const now = new Date();
+    
+    for (let i = days - 1; i >= 0; i--) {
+        const date = new Date(now);
+        if (days <= 24) {
+            date.setHours(date.getHours() - i);
+            labels.push(date.toLocaleTimeString('en-US', { hour: '2-digit' }));
+        } else if (days <= 30) {
+            date.setDate(date.getDate() - i);
+            labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        } else {
+            date.setDate(date.getDate() - i);
+            labels.push(date.toLocaleDateString('en-US', { month: 'short' }));
+        }
+    }
+    
+    return labels;
+}
+
+function closeCryptoChart() {
+    document.getElementById('crypto-chart-modal').classList.remove('show');
 }
 
 // === UTILITIES ===
