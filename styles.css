@@ -260,19 +260,19 @@ body.dark-mode {
 
 @keyframes zoomPan {
     0% {
-        transform: scale(1) rotateZ(0deg);
+        transform: scale(1);
     }
     25% {
-        transform: scale(1.05) rotateZ(90deg);
+        transform: scale(1.05);
     }
     50% {
-        transform: scale(1.1) rotateZ(180deg);
+        transform: scale(1.1);
     }
     75% {
-        transform: scale(1.05) rotateZ(270deg);
+        transform: scale(1.05);
     }
     100% {
-        transform: scale(1) rotateZ(360deg);
+        transform: scale(1);
     }
 }
 
