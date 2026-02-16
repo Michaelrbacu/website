@@ -343,9 +343,10 @@ function previousSpace() {
 }
 
 function startSpaceAutoRotate() {
-    spaceAutoRotateInterval = setInterval(() => {
-        nextSpace();
-    }, 8000); // Change image every 8 seconds
+    // Auto-rotate disabled - images stay static unless user navigates manually
+    // spaceAutoRotateInterval = setInterval(() => {
+    //     nextSpace();
+    // }, 8000); // Change image every 8 seconds
 }
 
 // === PAGE NAVIGATION ===
