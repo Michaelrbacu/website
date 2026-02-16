@@ -114,6 +114,8 @@ function initThreeJsScene() {
     createAnimatedStars();
 
     // Add mouse interactivity with GSAP
+    // DISABLED: Removed mousemove animation that was causing visual rotation
+    /*
     document.addEventListener('mousemove', (e) => {
         if (threeCamera) {
             const x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -127,6 +129,7 @@ function initThreeJsScene() {
             });
         }
     });
+    */
 
     // Animation loop with GSAP
     animate3DScene();
