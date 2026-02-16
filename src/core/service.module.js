@@ -116,65 +116,152 @@ class CryptoService {
 class CourtService {
     constructor() {
         this.cases = [];
+        this.courtListenerBaseUrl = 'https://www.courtlistener.com/api/rest/v3';
+        this.cacheKey = 'court_cases_cache';
+        this.cacheExpiry = 'court_cases_expiry';
     }
 
-    getCases() {
-        return [
-            {
-                case_name: 'Securities & Exchange Commission v. FTX Trading Ltd.',
-                docket_number: '2024-SDNY-11547',
-                court: 'US District Court, Southern District of New York',
-                date_filed: '2022-11-08',
-                judge: 'Judge Lewis A. Kaplan',
-                parties: ['Securities & Exchange Commission', 'FTX Trading Ltd.', 'Sam Bankman-Fried'],
-                summary: 'High-profile cryptocurrency fraud case. Securities violations, wire fraud, and conspiracy charges involving billions in customer funds. Judge Kaplan presiding.',
-                type: 'Criminal',
-                status: 'Active',
-                transcripts: [
-                    { id: 'ftx_001', title: 'Opening Arguments', date: '2023-11-13', pages: 145 },
-                    { id: 'ftx_002', title: 'SBF Testimony Day 1', date: '2023-11-27', pages: 312 },
-                    { id: 'ftx_003', title: 'SBF Testimony Day 2', date: '2023-11-28', pages: 289 },
-                    { id: 'ftx_004', title: 'Expert Witness - Fraud', date: '2023-12-04', pages: 203 },
-                    { id: 'ftx_005', title: 'Closing Arguments', date: '2023-12-18', pages: 178 }
-                ]
-            },
-            {
-                case_name: 'United States v. Bankman-Fried, Samuel',
-                docket_number: '2024-USDC-SDNY-845',
-                court: 'US District Court, Southern District of New York',
-                date_filed: '2022-12-13',
-                judge: 'Judge Lewis A. Kaplan',
-                parties: ['United States', 'Samuel Bankman-Fried'],
-                summary: 'Criminal prosecution of FTX founder. Wire fraud, money laundering, and conspiracy. Judge Kaplan overseeing trial.',
-                type: 'Criminal',
-                status: 'Active',
-                transcripts: [
-                    { id: 'sbf_001', title: 'Arraignment', date: '2022-12-13', pages: 87 },
-                    { id: 'sbf_002', title: 'Bail Hearing', date: '2022-12-22', pages: 156 },
-                    { id: 'sbf_003', title: 'Motions Hearing', date: '2023-01-30', pages: 201 },
-                    { id: 'sbf_004', title: 'Pre-Trial Conference', date: '2023-09-15', pages: 134 }
-                ]
-            },
-            {
-                case_name: 'Federal Trade Commission v. TechCorp Inc.',
-                docket_number: '2024-NDCA-8901',
-                court: 'US District Court, Northern District of California',
-                date_filed: '2024-01-20',
-                judge: 'Judge Elena Rodriguez',
-                parties: ['Federal Trade Commission', 'TechCorp Inc.'],
-                summary: 'Antitrust case involving alleged monopolistic practices in the technology sector.',
-                type: 'Civil',
-                status: 'Ongoing',
-                transcripts: [
-                    { id: 'tech_001', title: 'Case Management Conference', date: '2024-02-10', pages: 92 },
-                    { id: 'tech_002', title: 'Discovery Dispute Hearing', date: '2024-03-15', pages: 167 }
-                ]
+    /**
+     * Fetch cases from CourtListener API
+     * Free public API for court documents and opinions
+     */
+    async getCases(forceRefresh = false) {
+        // Check cache first
+        if (!forceRefresh) {
+            const cached = this.getCachedCases();
+            if (cached) {
+                return cached;
             }
-        ];
+        }
+
+        try {
+            console.log('📡 Fetching cases from CourtListener API...');
+            
+            // Fetch recent opinions from US Courts
+            const response = await fetch(
+                `${this.courtListenerBaseUrl}/opinions/?order_by=-date_filed&limit=20&format=json`
+            );
+
+            if (!response.ok) {
+                throw new Error(`API request failed with status ${response.status}`);
+            }
+
+            const data = await response.json();
+            const cases = this.transformApiResponseToCases(data.results);
+            
+            // Cache the results
+            this.cacheResults(cases);
+            
+            this.cases = cases;
+            console.log(`✅ Loaded ${cases.length} cases from CourtListener API`);
+            return cases;
+        } catch (error) {
+            console.error('❌ Error fetching from CourtListener API:', error);
+            // Fall back to empty array if API fails
+            return [];
+        }
     }
 
-    searchCases(query, judge = '', party = '') {
-        return this.getCases().filter(c => {
+    /**
+     * Transform CourtListener API response to internal case format
+     */
+    transformApiResponseToCases(results) {
+        return results.map((opinion, index) => ({
+            case_name: opinion.case_name || opinion.plain_text?.substring(0, 100) || 'Unknown Case',
+            docket_number: opinion.docket_id ? `DOCKET-${opinion.docket_id}` : `OPINION-${opinion.id}`,
+            court: this.getCourtName(opinion.court),
+            date_filed: opinion.date_filed || new Date().toISOString().split('T')[0],
+            judge: opinion.judge ? opinion.judge.map(j => `Judge ${j.name}`).join(', ') : 'Presiding Judge',
+            parties: this.extractParties(opinion.case_name || ''),
+            summary: opinion.plain_text?.substring(0, 300) + '...' || 'Court opinion case',
+            type: opinion.type ? opinion.type.toUpperCase() : 'CIVIL',
+            status: 'Completed',
+            opinion_id: opinion.id,
+            opinion_url: opinion.absolute_url,
+            transcripts: [
+                {
+                    id: `opinion_${opinion.id}`,
+                    title: 'Full Opinion',
+                    date: opinion.date_filed || new Date().toISOString().split('T')[0],
+                    pages: Math.ceil((opinion.plain_text?.length || 0) / 2500)
+                }
+            ]
+        }));
+    }
+
+    /**
+     * Extract parties from case name
+     */
+    extractParties(caseName) {
+        const parts = caseName.split(' v. ');
+        if (parts.length === 2) {
+            return [parts[0].trim(), parts[1].trim()];
+        }
+        return [caseName];
+    }
+
+    /**
+     * Get human-readable court name from court object
+     */
+    getCourtName(court) {
+        if (!court) return 'Court of Record';
+        
+        const courtMap = {
+            'scotus': 'United States Supreme Court',
+            'ca1': 'United States Court of Appeals - First Circuit',
+            'ca2': 'United States Court of Appeals - Second Circuit',
+            'ca3': 'United States Court of Appeals - Third Circuit',
+            'ca4': 'United States Court of Appeals - Fourth Circuit',
+            'ca5': 'United States Court of Appeals - Fifth Circuit',
+            'ca6': 'United States Court of Appeals - Sixth Circuit',
+            'ca7': 'United States Court of Appeals - Seventh Circuit',
+            'ca8': 'United States Court of Appeals - Eighth Circuit',
+            'ca9': 'United States Court of Appeals - Ninth Circuit',
+            'ca10': 'United States Court of Appeals - Tenth Circuit',
+            'ca11': 'United States Court of Appeals - Eleventh Circuit',
+            'cadc': 'United States Court of Appeals - District of Columbia',
+            'cafc': 'United States Court of Appeals - Federal Circuit',
+        };
+        
+        return courtMap[court.id] || court.full_name || 'Court of Record';
+    }
+
+    /**
+     * Cache results with expiry
+     */
+    cacheResults(cases) {
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(this.cacheKey, JSON.stringify(cases));
+            // Cache for 24 hours
+            localStorage.setItem(this.cacheExpiry, Date.now() + (24 * 60 * 60 * 1000));
+        }
+    }
+
+    /**
+     * Get cached results if valid
+     */
+    getCachedCases() {
+        if (typeof localStorage === 'undefined') return null;
+        
+        const expiry = localStorage.getItem(this.cacheExpiry);
+        if (!expiry || Date.now() > parseInt(expiry)) {
+            // Cache expired
+            localStorage.removeItem(this.cacheKey);
+            localStorage.removeItem(this.cacheExpiry);
+            return null;
+        }
+        
+        const cached = localStorage.getItem(this.cacheKey);
+        return cached ? JSON.parse(cached) : null;
+    }
+
+    /**
+     * Search cases from API results
+     */
+    async searchCases(query, judge = '', party = '') {
+        const cases = await this.getCases();
+        
+        return cases.filter(c => {
             const queryMatch = !query || 
                 c.case_name.toLowerCase().includes(query.toLowerCase()) ||
                 c.summary.toLowerCase().includes(query.toLowerCase()) ||
@@ -187,70 +274,94 @@ class CourtService {
         });
     }
 
-    getTranscripts(caseId) {
-        const allCases = this.getCases();
-        const caseData = allCases.find(c => c.docket_number === caseId);
+    /**
+     * Get transcripts for a case (in this case, the full opinion text)
+     */
+    async getTranscripts(caseId) {
+        const cases = await this.getCases();
+        const caseData = cases.find(c => c.docket_number === caseId);
         return caseData ? caseData.transcripts : [];
     }
 
-    getTranscriptContent(transcriptId) {
-        // Simulate transcript content
-        const transcripts = {
-            'ftx_001': 'OPENING ARGUMENTS - SEC v. FTX Trading Ltd.\n\nHonorable Judge John J. Kaplan presiding.\n\n[Opening statements and arguments would appear here...]\n\nThis is a simulated transcript of the opening arguments in the FTX case.',
-            'ftx_002': 'TESTIMONY OF SAMUEL BANKMAN-FRIED - DAY 1\n\nQ: Please state your name for the record.\nA: Samuel Bankman-Fried.\n\nQ: How did you found FTX?\nA: [Testimony content would continue...]\n\nThis is a simulated transcript.',
-            'ftx_003': 'TESTIMONY OF SAMUEL BANKMAN-FRIED - DAY 2\n\nQ: Continuing from yesterday...\n\n[Continuation of testimony...]\n\nThis is a simulated transcript.',
-            'ftx_004': 'EXPERT WITNESS TESTIMONY - FRAUD ANALYSIS\n\nQ: Please describe your findings regarding fraudulent conduct.\nA: Based on my analysis...\n\n[Expert testimony content...]\n\nThis is a simulated transcript.',
-            'ftx_005': 'CLOSING ARGUMENTS - SEC v. FTX Trading Ltd.\n\n[Final arguments and jury instructions...]\n\nThis is a simulated transcript of closing arguments.',
-            'sbf_001': 'ARRAIGNMENT - United States v. Bankman-Fried\n\n[Arraignment proceedings...]\n\nThis is a simulated transcript.',
-            'sbf_002': 'BAIL HEARING - United States v. Bankman-Fried\n\n[Bail determination proceedings...]\n\nThis is a simulated transcript.',
-            'sbf_003': 'MOTIONS HEARING - United States v. Bankman-Fried\n\n[Motions and responses...]\n\nThis is a simulated transcript.',
-            'sbf_004': 'PRE-TRIAL CONFERENCE - United States v. Bankman-Fried\n\n[Pre-trial matters...]\n\nThis is a simulated transcript.',
-            'tech_001': 'CASE MANAGEMENT CONFERENCE - FTC v. TechCorp Inc.\n\n[Case management issues...]\n\nThis is a simulated transcript.',
-            'tech_002': 'DISCOVERY DISPUTE HEARING - FTC v. TechCorp Inc.\n\n[Discovery disputes...]\n\nThis is a simulated transcript.'
-        };
+    async getTranscriptContent(transcriptId) {
+        // Extract opinion ID from transcript ID
+        const opinionId = transcriptId.replace('opinion_', '');
+        
+        try {
+            const response = await fetch(
+                `${this.courtListenerBaseUrl}/opinions/${opinionId}/?format=json`
+            );
+            
+            if (!response.ok) {
+                throw new Error(`Failed to fetch opinion content`);
+            }
+            
+            const data = await response.json();
+            return data.plain_text || 'Opinion text not available';
+        } catch (error) {
+            console.error('Error fetching transcript content:', error);
+            return `Unable to fetch opinion content. Error: ${error.message}`;
+        }
+    }
         return transcripts[transcriptId] || '';
     }
 
-    downloadTranscript(transcriptId, transcriptTitle) {
-        const content = this.getTranscriptContent(transcriptId);
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${transcriptTitle.replace(/\s+/g, '_')}_${transcriptId}.txt`;
-        document.body.appendChild(link);
-        link.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(link);
+    async downloadTranscript(transcriptId, transcriptTitle) {
+        try {
+            const content = await this.getTranscriptContent(transcriptId);
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${transcriptTitle.replace(/\s+/g, '_')}_${transcriptId}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Error downloading transcript:', error);
+            alert('Failed to download transcript. Please try again.');
+        }
     }
 
-    downloadAllTranscripts(caseId, caseName) {
-        const transcripts = this.getTranscripts(caseId);
-        if (transcripts.length === 0) return;
+    async downloadAllTranscripts(caseId, caseName) {
+        try {
+            const transcripts = await this.getTranscripts(caseId);
+            if (transcripts.length === 0) return;
 
-        let fullContent = `COMPLETE CASE TRANSCRIPTS\n`;
-        fullContent += `Case: ${caseName}\n`;
-        fullContent += `Docket: ${caseId}\n`;
-        fullContent += `Downloaded: ${new Date().toLocaleString()}\n`;
-        fullContent += `${'='.repeat(70)}\n\n`;
+            let fullContent = `COMPLETE CASE TRANSCRIPTS\n`;
+            fullContent += `Case: ${caseName}\n`;
+            fullContent += `Docket: ${caseId}\n`;
+            fullContent += `Downloaded: ${new Date().toLocaleString()}\n`;
+            fullContent += `Data Source: CourtListener API (www.courtlistener.com)\n`;
+            fullContent += `${'='.repeat(70)}\n\n`;
 
-        transcripts.forEach(transcript => {
-            fullContent += `\n\nTRANSCRIPT: ${transcript.title}\n`;
-            fullContent += `Date: ${transcript.date} | Pages: ${transcript.pages}\n`;
-            fullContent += `${'-'.repeat(70)}\n`;
-            fullContent += this.getTranscriptContent(transcript.id);
-            fullContent += `\n\n${'='.repeat(70)}\n`;
-        });
+            for (const transcript of transcripts) {
+                try {
+                    const content = await this.getTranscriptContent(transcript.id);
+                    fullContent += `\n\nOPINION: ${transcript.title}\n`;
+                    fullContent += `Date: ${transcript.date} | Pages: ${transcript.pages}\n`;
+                    fullContent += `${'-'.repeat(70)}\n`;
+                    fullContent += content;
+                    fullContent += `\n\n${'='.repeat(70)}\n`;
+                } catch (error) {
+                    fullContent += `\n\n[Error fetching opinion ${transcript.id}]\n`;
+                }
+            }
 
-        const blob = new Blob([fullContent], { type: 'text/plain' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${caseName.replace(/\s+/g, '_')}_all_transcripts.txt`;
-        document.body.appendChild(link);
-        link.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(link);
+            const blob = new Blob([fullContent], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${caseName.replace(/\s+/g, '_')}_all_opinions.txt`;
+            document.body.appendChild(link);
+            link.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Error downloading all transcripts:', error);
+            alert('Failed to download transcripts. Please try again.');
+        }
     }
 }
 

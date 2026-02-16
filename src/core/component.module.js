@@ -425,15 +425,23 @@ class CourtComponent extends BaseComponent {
     }
 
     viewTranscript(transcriptId, title) {
-        const content = this.courtService.getTranscriptContent(transcriptId);
         const viewer = this.querySelector('#transcript-viewer');
         
         if (viewer) {
-            this.querySelector('#viewer-title').textContent = title;
+            this.querySelector('#viewer-title').textContent = title + ' (Loading...)';
             const contentDiv = this.querySelector('#transcript-content');
-            contentDiv.innerHTML = `<pre>${this.escapeHtml(content)}</pre>`;
-            viewer.classList.remove('hidden');
-            contentDiv.scrollTop = 0;
+            contentDiv.innerHTML = '<p>Loading opinion text from CourtListener API...</p>';
+            
+            // Fetch content asynchronously
+            this.courtService.getTranscriptContent(transcriptId).then(content => {
+                this.querySelector('#viewer-title').textContent = title;
+                contentDiv.innerHTML = `<pre>${this.escapeHtml(content)}</pre>`;
+                contentDiv.scrollTop = 0;
+            }).catch(error => {
+                contentDiv.innerHTML = `<p style="color: red;">Error loading content: ${error.message}</p>`;
+            });
+            
+            viewer.style.display = 'block';
         }
     }
 
@@ -442,12 +450,48 @@ class CourtComponent extends BaseComponent {
     }
 
     downloadTranscript(transcriptId, title) {
-        this.courtService.downloadTranscript(transcriptId, title);
+        // Show loading indicator
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Downloading...';
+        btn.disabled = true;
+        
+        this.courtService.downloadTranscript(transcriptId, title).then(() => {
+            btn.textContent = '✅ Downloaded!';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }, 2000);
+        }).catch(error => {
+            btn.textContent = '❌ Error';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }, 2000);
+        });
     }
 
     downloadAllTranscripts() {
         if (this.selectedCase) {
-            this.courtService.downloadAllTranscripts(this.selectedCase.docket_number, this.selectedCase.case_name);
+            // Show loading indicator
+            const btn = this.querySelector('#btn-download-all');
+            const originalText = btn.textContent;
+            btn.textContent = '⏳ Downloading all...';
+            btn.disabled = true;
+            
+            this.courtService.downloadAllTranscripts(this.selectedCase.docket_number, this.selectedCase.case_name).then(() => {
+                btn.textContent = '✅ Downloaded!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 2000);
+            }).catch(error => {
+                btn.textContent = '❌ Error';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 2000);
+            });
         }
     }
 

@@ -140,6 +140,15 @@ class ApplicationBootstrapper {
         courtComponent.onInit();  // Just call onInit to load data
         window.courtComponent = courtComponent;
         this.components.push(courtComponent);
+        
+        // Preload court data from API
+        console.log('📡 Preloading court data from CourtListener...');
+        try {
+            await courtComponent.courtService.getCases();
+            console.log('✅ Court data preloaded successfully');
+        } catch (error) {
+            console.warn('⚠️ Could not preload court data:', error);
+        }
 
         console.log(`✅ Components initialized: ${this.components.length} components`);
     }

@@ -372,9 +372,17 @@ function showPage(pageName) {
     } else if (pageName === 'courts') {
         // Initialize CourtComponent for courts page
         if (window.courtComponent) {
-            window.courtComponent.filteredCases = window.courtComponent.cases;
-            window.courtComponent.selectedCase = null;
-            window.courtComponent.render();
+            // Load all cases asynchronously
+            window.courtComponent.courtService.getCases().then(cases => {
+                window.courtComponent.cases = cases;
+                window.courtComponent.filteredCases = cases;
+                window.courtComponent.selectedCase = null;
+                window.courtComponent.render();
+            }).catch(error => {
+                console.error('Error loading court data:', error);
+                document.getElementById('courts-results').innerHTML = 
+                    '<p style="color: red;">Error loading court data. Please refresh the page.</p>';
+            });
         }
     }
 }
@@ -879,9 +887,16 @@ async function searchCourts() {
 
     // Use CourtComponent if available
     if (window.courtComponent) {
-        window.courtComponent.filteredCases = window.courtComponent.courtService.searchCases(query, judge, party);
-        window.courtComponent.selectedCase = null;
-        window.courtComponent.render();
+        const resultsDiv = document.getElementById('courts-results');
+        resultsDiv.innerHTML = '<div style="padding: 20px; text-align: center;"><p>🔍 Searching CourtListener database...</p><div class="loading"><div class="spinner"></div></div></div>';
+        
+        try {
+            window.courtComponent.filteredCases = await window.courtComponent.courtService.searchCases(query, judge, party);
+            window.courtComponent.selectedCase = null;
+            window.courtComponent.render();
+        } catch (error) {
+            resultsDiv.innerHTML = '<div style="padding: 20px; color: red;"><p>❌ Error searching cases: ' + error.message + '</p></div>';
+        }
     }
 }
 
