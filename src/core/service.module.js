@@ -117,6 +117,7 @@ class CourtService {
     constructor() {
         this.cases = [];
         this.courtListenerBaseUrl = 'https://www.courtlistener.com/api/rest/v3';
+        this.apiKey = '1e8340006cf05fa49ac0ce05d4700e8a303a86ab'; // CourtListener API key
         this.cacheKey = 'court_cases_cache';
         this.cacheExpiry = 'court_cases_expiry';
     }
@@ -137,10 +138,14 @@ class CourtService {
         try {
             console.log('📡 Fetching cases from CourtListener API...');
             
-            // Fetch recent opinions from US Courts
-            const response = await fetch(
-                `${this.courtListenerBaseUrl}/opinions/?order_by=-date_filed&limit=20&format=json`
-            );
+            // Fetch recent opinions from US Courts with API key
+            const url = new URL(`${this.courtListenerBaseUrl}/opinions/`);
+            url.searchParams.append('order_by', '-date_filed');
+            url.searchParams.append('limit', '20');
+            url.searchParams.append('format', 'json');
+            url.searchParams.append('api_key', this.apiKey);
+
+            const response = await fetch(url.toString());
 
             if (!response.ok) {
                 throw new Error(`API request failed with status ${response.status}`);
@@ -288,9 +293,11 @@ class CourtService {
         const opinionId = transcriptId.replace('opinion_', '');
         
         try {
-            const response = await fetch(
-                `${this.courtListenerBaseUrl}/opinions/${opinionId}/?format=json`
-            );
+            const url = new URL(`${this.courtListenerBaseUrl}/opinions/${opinionId}/`);
+            url.searchParams.append('format', 'json');
+            url.searchParams.append('api_key', this.apiKey);
+
+            const response = await fetch(url.toString());
             
             if (!response.ok) {
                 throw new Error(`Failed to fetch opinion content`);
