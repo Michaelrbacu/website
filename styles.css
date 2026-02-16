@@ -250,31 +250,13 @@ body.dark-mode {
     background-size: cover;
     background-position: center;
     transition: opacity 0.8s ease-in-out;
-    animation: zoomPan 8s ease-in-out infinite;
 }
 
 .space-image.active {
     opacity: 1;
-    animation: zoomPan 8s ease-in-out infinite;
+    transition: opacity 0.8s ease-in-out;
 }
 
-@keyframes zoomPan {
-    0% {
-        transform: scale(1);
-    }
-    25% {
-        transform: scale(1.05);
-    }
-    50% {
-        transform: scale(1.1);
-    }
-    75% {
-        transform: scale(1.05);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
 
 .space-overlay {
     position: absolute;
