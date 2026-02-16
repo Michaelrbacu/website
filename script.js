@@ -176,11 +176,11 @@ function createAnimatedStars() {
 function animate3DScene() {
     requestAnimationFrame(animate3DScene);
 
-    // Rotate stars
-    threeStars.forEach(star => {
-        star.rotation.x += 0.0001;
-        star.rotation.y += 0.0002;
-    });
+    // Stars are now static - no rotation
+    // threeStars.forEach(star => {
+    //     star.rotation.x += 0.0001;
+    //     star.rotation.y += 0.0002;
+    // });
 
     if (threeRenderer) {
         threeRenderer.render(threeScene, threeCamera);
