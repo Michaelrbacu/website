@@ -9,7 +9,7 @@ const COURTLISTENER_API = 'https://www.courtlistener.com/api/rest/v3';
 
 
 // NASA API
-const NASA_API_KEY = process.env.NASA_KEY;
+const NASA_API_KEY = process.env.NASA_API_KEY;
 const NASA_APOD_API = 'https://api.nasa.gov/planetary/apod';
 
 // Space background variables
