@@ -267,7 +267,7 @@ class CryptoComponent extends BaseComponent {
  */
 class CourtComponent extends BaseComponent {
     constructor(dependencies) {
-        super('#court-section', '', dependencies);
+        super('#courts-results', '', dependencies);
         this.courtService = dependencies.court;
         this.cases = [];
         this.filteredCases = [];
@@ -277,138 +277,115 @@ class CourtComponent extends BaseComponent {
     onInit() {
         this.cases = this.courtService.getCases();
         this.filteredCases = this.cases;
+        // Don't render during init - wait for showPage to be called
     }
 
     render() {
-        if (!this.element) return;
-
-        // If a case is selected, show case details with transcripts
-        if (this.selectedCase) {
-            this.renderCaseDetails();
+        if (!this.selectedCase) {
+            // Render case list
+            this.renderCasesList();
         } else {
-            this.renderCaseList();
+            // Render case details with transcripts
+            this.renderCaseDetails();
         }
 
         this.attachEventListeners();
     }
 
-    renderCaseList() {
-        this.element.innerHTML = `
-            <div class="court-container">
-                <h2>Court Document Search</h2>
-                <div class="search-filters">
-                    <input type="text" id="search-query" placeholder="Search cases...">
-                    <input type="text" id="filter-judge" placeholder="Filter by judge...">
-                </div>
-                <div class="cases-list">
-                    ${this.renderCasesList()}
+    renderCasesList() {
+        if (!this.element) return;
+        
+        this.element.innerHTML = this.filteredCases.map(caseItem => `
+            <div class="case-card" data-docket="${caseItem.docket_number}" style="cursor: pointer; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9; transition: all 0.3s ease;">
+                <h4 style="margin: 0 0 8px 0; color: #333;">${caseItem.case_name}</h4>
+                <p style="margin: 4px 0; font-size: 0.9em; color: #666;"><strong>Docket:</strong> ${caseItem.docket_number}</p>
+                <p style="margin: 4px 0; font-size: 0.9em; color: #666;"><strong>Judge:</strong> ${caseItem.judge}</p>
+                <p style="margin: 4px 0; font-size: 0.9em; color: #666;"><strong>Court:</strong> ${caseItem.court}</p>
+                <p style="margin: 8px 0; font-size: 0.85em; color: #555;">${caseItem.summary}</p>
+                <div style="margin-top: 8px; font-size: 0.85em;">
+                    <span style="display: inline-block; padding: 4px 8px; background: ${caseItem.type === 'Criminal' ? '#e74c3c' : '#3498db'}; color: white; border-radius: 4px; margin-right: 8px;">${caseItem.type}</span>
+                    <span style="display: inline-block; padding: 4px 8px; background: #27ae60; color: white; border-radius: 4px;">${caseItem.status}</span>
+                    <span style="display: inline-block; padding: 4px 8px; background: #95a5a6; color: white; border-radius: 4px; margin-left: 8px;">📄 ${caseItem.transcripts?.length || 0} transcripts</span>
                 </div>
             </div>
-        `;
+        `).join('');
     }
 
     renderCaseDetails() {
+        if (!this.element) return;
+        
         const transcripts = this.courtService.getTranscripts(this.selectedCase.docket_number);
         
-        this.element.innerHTML = `
-            <div class="court-container">
-                <button class="btn-back" id="btn-back-cases">← Back to Cases</button>
-                <div class="case-details">
-                    <h2>${this.selectedCase.case_name}</h2>
+        let html = `
+            <div style="max-width: 900px;">
+                <button id="btn-back-cases" style="padding: 8px 16px; margin-bottom: 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em;">← Back to Cases</button>
+                
+                <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                    <h2 style="margin-top: 0;">${this.selectedCase.case_name}</h2>
                     
-                    <div class="case-info-grid">
-                        <div class="info-item">
-                            <label>Docket Number:</label>
-                            <p>${this.selectedCase.docket_number}</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0;">
+                        <div>
+                            <strong>Docket Number:</strong><br>${this.selectedCase.docket_number}
                         </div>
-                        <div class="info-item">
-                            <label>Court:</label>
-                            <p>${this.selectedCase.court}</p>
+                        <div>
+                            <strong>Court:</strong><br>${this.selectedCase.court}
                         </div>
-                        <div class="info-item">
-                            <label>Judge:</label>
-                            <p>${this.selectedCase.judge}</p>
+                        <div>
+                            <strong>Judge:</strong><br>${this.selectedCase.judge}
                         </div>
-                        <div class="info-item">
-                            <label>Date Filed:</label>
-                            <p>${this.selectedCase.date_filed}</p>
+                        <div>
+                            <strong>Date Filed:</strong><br>${this.selectedCase.date_filed}
                         </div>
-                        <div class="info-item">
-                            <label>Type:</label>
-                            <p>${this.selectedCase.type}</p>
+                        <div>
+                            <strong>Type:</strong><br>${this.selectedCase.type}
                         </div>
-                        <div class="info-item">
-                            <label>Status:</label>
-                            <p><span class="status-badge">${this.selectedCase.status}</span></p>
+                        <div>
+                            <strong>Status:</strong><br><span style="display: inline-block; padding: 4px 8px; background: #27ae60; color: white; border-radius: 4px;">${this.selectedCase.status}</span>
                         </div>
                     </div>
 
-                    <div class="case-parties">
-                        <h3>Parties Involved</h3>
-                        <ul>
-                            ${this.selectedCase.parties.map(party => `<li>${party}</li>`).join('')}
-                        </ul>
-                    </div>
+                    <h3>Parties Involved</h3>
+                    <ul style="list-style-position: inside;">
+                        ${this.selectedCase.parties.map(party => `<li>${party}</li>`).join('')}
+                    </ul>
 
-                    <div class="case-summary">
-                        <h3>Summary</h3>
-                        <p>${this.selectedCase.summary}</p>
-                    </div>
+                    <h3>Summary</h3>
+                    <p>${this.selectedCase.summary}</p>
 
-                    <div class="transcripts-section">
-                        <div class="transcripts-header">
-                            <h3>Court Transcripts (${transcripts.length})</h3>
-                            <button class="btn-download-all" id="btn-download-all">⬇️ Download All Transcripts</button>
+                    <div style="border-top: 1px solid #ddd; padding-top: 20px; margin-top: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h3 style="margin: 0;">Court Transcripts (${transcripts.length})</h3>
+                            <button id="btn-download-all" style="padding: 8px 16px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer;">⬇️ Download All</button>
                         </div>
                         
-                        <div class="transcripts-list">
+                        <div>
                             ${transcripts.map(transcript => `
-                                <div class="transcript-card">
-                                    <div class="transcript-info">
-                                        <h4>${transcript.title}</h4>
-                                        <p class="transcript-meta">
-                                            <span class="date">📅 ${transcript.date}</span>
-                                            <span class="pages">📄 ${transcript.pages} pages</span>
-                                        </p>
+                                <div style="padding: 12px; margin: 8px 0; background: #f9f9f9; border-left: 4px solid #3498db; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <strong>${transcript.title}</strong><br>
+                                        <span style="font-size: 0.9em; color: #666;">📅 ${transcript.date} | 📄 ${transcript.pages} pages</span>
                                     </div>
-                                    <div class="transcript-actions">
-                                        <button class="btn-view-transcript" data-id="${transcript.id}" data-title="${transcript.title}">
-                                            👁️ View
-                                        </button>
-                                        <button class="btn-download-transcript" data-id="${transcript.id}" data-title="${transcript.title}">
-                                            ⬇️ Download
-                                        </button>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn-view-transcript" data-id="${transcript.id}" data-title="${transcript.title}" style="padding: 6px 12px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">👁️ View</button>
+                                        <button class="btn-download-transcript" data-id="${transcript.id}" data-title="${transcript.title}" style="padding: 6px 12px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer;">⬇️ Download</button>
                                     </div>
                                 </div>
                             `).join('')}
                         </div>
                     </div>
 
-                    <div id="transcript-viewer" class="transcript-viewer hidden">
-                        <div class="transcript-viewer-header">
-                            <h3 id="viewer-title"></h3>
-                            <button class="btn-close-viewer" id="btn-close-viewer">✕ Close</button>
+                    <div id="transcript-viewer" style="display: none; margin-top: 20px; background: #f5f5f5; padding: 16px; border-radius: 8px; border: 1px solid #ddd;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h3 id="viewer-title" style="margin: 0;"></h3>
+                            <button id="btn-close-viewer" style="padding: 6px 12px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">✕ Close</button>
                         </div>
-                        <div id="transcript-content" class="transcript-content"></div>
+                        <div id="transcript-content" style="background: white; padding: 16px; border-radius: 4px; max-height: 500px; overflow-y: auto; font-family: monospace; font-size: 0.9em; line-height: 1.6; white-space: pre-wrap; word-break: break-word;"></div>
                     </div>
                 </div>
             </div>
         `;
-    }
-
-    renderCasesList() {
-        return this.filteredCases.map(caseItem => `
-            <div class="case-card" data-docket="${caseItem.docket_number}">
-                <h4>${caseItem.case_name}</h4>
-                <p class="case-docket">Docket: ${caseItem.docket_number}</p>
-                <p class="case-judge">Judge: ${caseItem.judge}</p>
-                <p class="case-summary">${caseItem.summary}</p>
-                <div class="case-card-footer">
-                    <span class="case-status">${caseItem.status}</span>
-                    <span class="transcript-count">📄 ${caseItem.transcripts?.length || 0} transcripts</span>
-                </div>
-            </div>
-        `).join('');
+        
+        this.element.innerHTML = html;
     }
 
     attachEventListeners() {

@@ -369,6 +369,13 @@ function showPage(pageName) {
         loadAdminPostsList();
     } else if (pageName === 'crypto') {
         loadCryptoData();
+    } else if (pageName === 'courts') {
+        // Initialize CourtComponent for courts page
+        if (window.courtComponent) {
+            window.courtComponent.filteredCases = window.courtComponent.cases;
+            window.courtComponent.selectedCase = null;
+            window.courtComponent.render();
+        }
     }
 }
 
@@ -870,24 +877,12 @@ async function searchCourts() {
     const judge = document.getElementById('court-judge').value;
     const party = document.getElementById('court-party').value;
 
-    const resultsDiv = document.getElementById('courts-results');
-    resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Searching court documents...</div>';
-
-    const allCases = getAllMockCases();
-    
-    setTimeout(() => {
-        const filtered = filterCasesBySearch(allCases, query, judge, party);
-        
-        if (filtered.length > 0) {
-            resultsDiv.innerHTML = '';
-            filtered.forEach(caseData => {
-                const caseElement = createMockCaseElement(caseData);
-                resultsDiv.appendChild(caseElement);
-            });
-        } else {
-            resultsDiv.innerHTML = '<div class="empty-state"><p>No cases found. Try: FTX, fraud, Kaplan, Bankman-Fried, or another term.</p></div>';
-        }
-    }, 300);
+    // Use CourtComponent if available
+    if (window.courtComponent) {
+        window.courtComponent.filteredCases = window.courtComponent.courtService.searchCases(query, judge, party);
+        window.courtComponent.selectedCase = null;
+        window.courtComponent.render();
+    }
 }
 
 function displayCourtResults(results) {

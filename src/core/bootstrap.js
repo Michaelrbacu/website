@@ -122,9 +122,24 @@ class ApplicationBootstrapper {
         this.componentRegistry.register('admin', AdminComponent);
 
         // Initialize all components with dependency injection
-        this.components = this.componentRegistry.initializeAll(
-            this.getComponentDependencies()
-        );
+        const componentDeps = this.getComponentDependencies();
+        this.components = [];
+        
+        // Initialize each component, but handle court component specially
+        ['blog', 'crypto', 'admin'].forEach(name => {
+            const Component = this.componentRegistry.components.get(name);
+            const instance = this.componentRegistry.create(name, componentDeps);
+            if (instance && instance.initialize()) {
+                this.components.push(instance);
+            }
+        });
+
+        // Initialize court component but don't call initialize() yet (element doesn't exist)
+        const CourtComponentClass = this.componentRegistry.components.get('court');
+        const courtComponent = new CourtComponentClass(componentDeps);
+        courtComponent.onInit();  // Just call onInit to load data
+        window.courtComponent = courtComponent;
+        this.components.push(courtComponent);
 
         console.log(`✅ Components initialized: ${this.components.length} components`);
     }
