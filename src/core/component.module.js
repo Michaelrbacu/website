@@ -271,6 +271,7 @@ class CourtComponent extends BaseComponent {
         this.courtService = dependencies.court;
         this.cases = [];
         this.filteredCases = [];
+        this.selectedCase = null;
     }
 
     onInit() {
@@ -281,6 +282,17 @@ class CourtComponent extends BaseComponent {
     render() {
         if (!this.element) return;
 
+        // If a case is selected, show case details with transcripts
+        if (this.selectedCase) {
+            this.renderCaseDetails();
+        } else {
+            this.renderCaseList();
+        }
+
+        this.attachEventListeners();
+    }
+
+    renderCaseList() {
         this.element.innerHTML = `
             <div class="court-container">
                 <h2>Court Document Search</h2>
@@ -293,25 +305,173 @@ class CourtComponent extends BaseComponent {
                 </div>
             </div>
         `;
+    }
 
-        this.attachEventListeners();
+    renderCaseDetails() {
+        const transcripts = this.courtService.getTranscripts(this.selectedCase.docket_number);
+        
+        this.element.innerHTML = `
+            <div class="court-container">
+                <button class="btn-back" id="btn-back-cases">← Back to Cases</button>
+                <div class="case-details">
+                    <h2>${this.selectedCase.case_name}</h2>
+                    
+                    <div class="case-info-grid">
+                        <div class="info-item">
+                            <label>Docket Number:</label>
+                            <p>${this.selectedCase.docket_number}</p>
+                        </div>
+                        <div class="info-item">
+                            <label>Court:</label>
+                            <p>${this.selectedCase.court}</p>
+                        </div>
+                        <div class="info-item">
+                            <label>Judge:</label>
+                            <p>${this.selectedCase.judge}</p>
+                        </div>
+                        <div class="info-item">
+                            <label>Date Filed:</label>
+                            <p>${this.selectedCase.date_filed}</p>
+                        </div>
+                        <div class="info-item">
+                            <label>Type:</label>
+                            <p>${this.selectedCase.type}</p>
+                        </div>
+                        <div class="info-item">
+                            <label>Status:</label>
+                            <p><span class="status-badge">${this.selectedCase.status}</span></p>
+                        </div>
+                    </div>
+
+                    <div class="case-parties">
+                        <h3>Parties Involved</h3>
+                        <ul>
+                            ${this.selectedCase.parties.map(party => `<li>${party}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <div class="case-summary">
+                        <h3>Summary</h3>
+                        <p>${this.selectedCase.summary}</p>
+                    </div>
+
+                    <div class="transcripts-section">
+                        <div class="transcripts-header">
+                            <h3>Court Transcripts (${transcripts.length})</h3>
+                            <button class="btn-download-all" id="btn-download-all">⬇️ Download All Transcripts</button>
+                        </div>
+                        
+                        <div class="transcripts-list">
+                            ${transcripts.map(transcript => `
+                                <div class="transcript-card">
+                                    <div class="transcript-info">
+                                        <h4>${transcript.title}</h4>
+                                        <p class="transcript-meta">
+                                            <span class="date">📅 ${transcript.date}</span>
+                                            <span class="pages">📄 ${transcript.pages} pages</span>
+                                        </p>
+                                    </div>
+                                    <div class="transcript-actions">
+                                        <button class="btn-view-transcript" data-id="${transcript.id}" data-title="${transcript.title}">
+                                            👁️ View
+                                        </button>
+                                        <button class="btn-download-transcript" data-id="${transcript.id}" data-title="${transcript.title}">
+                                            ⬇️ Download
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div id="transcript-viewer" class="transcript-viewer hidden">
+                        <div class="transcript-viewer-header">
+                            <h3 id="viewer-title"></h3>
+                            <button class="btn-close-viewer" id="btn-close-viewer">✕ Close</button>
+                        </div>
+                        <div id="transcript-content" class="transcript-content"></div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     renderCasesList() {
         return this.filteredCases.map(caseItem => `
-            <div class="case-card">
+            <div class="case-card" data-docket="${caseItem.docket_number}">
                 <h4>${caseItem.case_name}</h4>
                 <p class="case-docket">Docket: ${caseItem.docket_number}</p>
                 <p class="case-judge">Judge: ${caseItem.judge}</p>
                 <p class="case-summary">${caseItem.summary}</p>
-                <span class="case-status">${caseItem.status}</span>
+                <div class="case-card-footer">
+                    <span class="case-status">${caseItem.status}</span>
+                    <span class="transcript-count">📄 ${caseItem.transcripts?.length || 0} transcripts</span>
+                </div>
             </div>
         `).join('');
     }
 
     attachEventListeners() {
-        this.querySelector('#search-query')?.addEventListener('input', () => this.filterCases());
-        this.querySelector('#filter-judge')?.addEventListener('input', () => this.filterCases());
+        if (this.selectedCase) {
+            // Case details view listeners
+            this.querySelector('#btn-back-cases')?.addEventListener('click', () => this.goBackToCases());
+            this.querySelector('#btn-download-all')?.addEventListener('click', () => this.downloadAllTranscripts());
+            
+            this.querySelectorAll('.btn-view-transcript').forEach(btn => {
+                btn.addEventListener('click', (e) => this.viewTranscript(e.target.dataset.id, e.target.dataset.title));
+            });
+
+            this.querySelectorAll('.btn-download-transcript').forEach(btn => {
+                btn.addEventListener('click', (e) => this.downloadTranscript(e.target.dataset.id, e.target.dataset.title));
+            });
+
+            this.querySelector('#btn-close-viewer')?.addEventListener('click', () => this.closeTranscriptViewer());
+        } else {
+            // Case list view listeners
+            this.querySelector('#search-query')?.addEventListener('input', () => this.filterCases());
+            this.querySelector('#filter-judge')?.addEventListener('input', () => this.filterCases());
+            
+            this.querySelectorAll('.case-card').forEach(card => {
+                card.addEventListener('click', () => this.selectCase(card.dataset.docket));
+            });
+        }
+    }
+
+    selectCase(docketNumber) {
+        this.selectedCase = this.cases.find(c => c.docket_number === docketNumber);
+        this.render();
+    }
+
+    goBackToCases() {
+        this.selectedCase = null;
+        this.render();
+    }
+
+    viewTranscript(transcriptId, title) {
+        const content = this.courtService.getTranscriptContent(transcriptId);
+        const viewer = this.querySelector('#transcript-viewer');
+        
+        if (viewer) {
+            this.querySelector('#viewer-title').textContent = title;
+            const contentDiv = this.querySelector('#transcript-content');
+            contentDiv.innerHTML = `<pre>${this.escapeHtml(content)}</pre>`;
+            viewer.classList.remove('hidden');
+            contentDiv.scrollTop = 0;
+        }
+    }
+
+    closeTranscriptViewer() {
+        this.querySelector('#transcript-viewer')?.classList.add('hidden');
+    }
+
+    downloadTranscript(transcriptId, title) {
+        this.courtService.downloadTranscript(transcriptId, title);
+    }
+
+    downloadAllTranscripts() {
+        if (this.selectedCase) {
+            this.courtService.downloadAllTranscripts(this.selectedCase.docket_number, this.selectedCase.case_name);
+        }
     }
 
     filterCases() {
@@ -320,6 +480,17 @@ class CourtComponent extends BaseComponent {
 
         this.filteredCases = this.courtService.searchCases(query, judge, '');
         this.render();
+    }
+
+    escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
     }
 }
 

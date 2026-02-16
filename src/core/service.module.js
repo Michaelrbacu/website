@@ -129,7 +129,14 @@ class CourtService {
                 parties: ['Securities & Exchange Commission', 'FTX Trading Ltd.', 'Sam Bankman-Fried'],
                 summary: 'High-profile cryptocurrency fraud case. Securities violations, wire fraud, and conspiracy charges involving billions in customer funds. Judge Kaplan presiding.',
                 type: 'Criminal',
-                status: 'Active'
+                status: 'Active',
+                transcripts: [
+                    { id: 'ftx_001', title: 'Opening Arguments', date: '2023-11-13', pages: 145 },
+                    { id: 'ftx_002', title: 'SBF Testimony Day 1', date: '2023-11-27', pages: 312 },
+                    { id: 'ftx_003', title: 'SBF Testimony Day 2', date: '2023-11-28', pages: 289 },
+                    { id: 'ftx_004', title: 'Expert Witness - Fraud', date: '2023-12-04', pages: 203 },
+                    { id: 'ftx_005', title: 'Closing Arguments', date: '2023-12-18', pages: 178 }
+                ]
             },
             {
                 case_name: 'United States v. Bankman-Fried, Samuel',
@@ -140,7 +147,13 @@ class CourtService {
                 parties: ['United States', 'Samuel Bankman-Fried'],
                 summary: 'Criminal prosecution of FTX founder. Wire fraud, money laundering, and conspiracy. Judge Kaplan overseeing trial.',
                 type: 'Criminal',
-                status: 'Active'
+                status: 'Active',
+                transcripts: [
+                    { id: 'sbf_001', title: 'Arraignment', date: '2022-12-13', pages: 87 },
+                    { id: 'sbf_002', title: 'Bail Hearing', date: '2022-12-22', pages: 156 },
+                    { id: 'sbf_003', title: 'Motions Hearing', date: '2023-01-30', pages: 201 },
+                    { id: 'sbf_004', title: 'Pre-Trial Conference', date: '2023-09-15', pages: 134 }
+                ]
             },
             {
                 case_name: 'Federal Trade Commission v. TechCorp Inc.',
@@ -151,7 +164,11 @@ class CourtService {
                 parties: ['Federal Trade Commission', 'TechCorp Inc.'],
                 summary: 'Antitrust case involving alleged monopolistic practices in the technology sector.',
                 type: 'Civil',
-                status: 'Ongoing'
+                status: 'Ongoing',
+                transcripts: [
+                    { id: 'tech_001', title: 'Case Management Conference', date: '2024-02-10', pages: 92 },
+                    { id: 'tech_002', title: 'Discovery Dispute Hearing', date: '2024-03-15', pages: 167 }
+                ]
             }
         ];
     }
@@ -168,6 +185,72 @@ class CourtService {
             
             return queryMatch && judgeMatch && partyMatch;
         });
+    }
+
+    getTranscripts(caseId) {
+        const allCases = this.getCases();
+        const caseData = allCases.find(c => c.docket_number === caseId);
+        return caseData ? caseData.transcripts : [];
+    }
+
+    getTranscriptContent(transcriptId) {
+        // Simulate transcript content
+        const transcripts = {
+            'ftx_001': 'OPENING ARGUMENTS - SEC v. FTX Trading Ltd.\n\nHonorable Judge John J. Kaplan presiding.\n\n[Opening statements and arguments would appear here...]\n\nThis is a simulated transcript of the opening arguments in the FTX case.',
+            'ftx_002': 'TESTIMONY OF SAMUEL BANKMAN-FRIED - DAY 1\n\nQ: Please state your name for the record.\nA: Samuel Bankman-Fried.\n\nQ: How did you found FTX?\nA: [Testimony content would continue...]\n\nThis is a simulated transcript.',
+            'ftx_003': 'TESTIMONY OF SAMUEL BANKMAN-FRIED - DAY 2\n\nQ: Continuing from yesterday...\n\n[Continuation of testimony...]\n\nThis is a simulated transcript.',
+            'ftx_004': 'EXPERT WITNESS TESTIMONY - FRAUD ANALYSIS\n\nQ: Please describe your findings regarding fraudulent conduct.\nA: Based on my analysis...\n\n[Expert testimony content...]\n\nThis is a simulated transcript.',
+            'ftx_005': 'CLOSING ARGUMENTS - SEC v. FTX Trading Ltd.\n\n[Final arguments and jury instructions...]\n\nThis is a simulated transcript of closing arguments.',
+            'sbf_001': 'ARRAIGNMENT - United States v. Bankman-Fried\n\n[Arraignment proceedings...]\n\nThis is a simulated transcript.',
+            'sbf_002': 'BAIL HEARING - United States v. Bankman-Fried\n\n[Bail determination proceedings...]\n\nThis is a simulated transcript.',
+            'sbf_003': 'MOTIONS HEARING - United States v. Bankman-Fried\n\n[Motions and responses...]\n\nThis is a simulated transcript.',
+            'sbf_004': 'PRE-TRIAL CONFERENCE - United States v. Bankman-Fried\n\n[Pre-trial matters...]\n\nThis is a simulated transcript.',
+            'tech_001': 'CASE MANAGEMENT CONFERENCE - FTC v. TechCorp Inc.\n\n[Case management issues...]\n\nThis is a simulated transcript.',
+            'tech_002': 'DISCOVERY DISPUTE HEARING - FTC v. TechCorp Inc.\n\n[Discovery disputes...]\n\nThis is a simulated transcript.'
+        };
+        return transcripts[transcriptId] || '';
+    }
+
+    downloadTranscript(transcriptId, transcriptTitle) {
+        const content = this.getTranscriptContent(transcriptId);
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${transcriptTitle.replace(/\s+/g, '_')}_${transcriptId}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+    }
+
+    downloadAllTranscripts(caseId, caseName) {
+        const transcripts = this.getTranscripts(caseId);
+        if (transcripts.length === 0) return;
+
+        let fullContent = `COMPLETE CASE TRANSCRIPTS\n`;
+        fullContent += `Case: ${caseName}\n`;
+        fullContent += `Docket: ${caseId}\n`;
+        fullContent += `Downloaded: ${new Date().toLocaleString()}\n`;
+        fullContent += `${'='.repeat(70)}\n\n`;
+
+        transcripts.forEach(transcript => {
+            fullContent += `\n\nTRANSCRIPT: ${transcript.title}\n`;
+            fullContent += `Date: ${transcript.date} | Pages: ${transcript.pages}\n`;
+            fullContent += `${'-'.repeat(70)}\n`;
+            fullContent += this.getTranscriptContent(transcript.id);
+            fullContent += `\n\n${'='.repeat(70)}\n`;
+        });
+
+        const blob = new Blob([fullContent], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${caseName.replace(/\s+/g, '_')}_all_transcripts.txt`;
+        document.body.appendChild(link);
+        link.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(link);
     }
 }
 
