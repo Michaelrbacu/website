@@ -7,8 +7,38 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Rotating Space Background Hero -->
+    <!-- Dynamic Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-container">
+            <div class="loading-logo">
+                <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <g class="star-group">
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#d4af37" stroke-width="2" class="star-orbit"></circle>
+                        <circle cx="50" cy="50" r="6" fill="#d4af37" class="star-center"></circle>
+                        <circle cx="90" cy="50" r="4" fill="#f1e5c3" class="star-point star-1"></circle>
+                        <circle cx="50" cy="10" r="4" fill="#f1e5c3" class="star-point star-2"></circle>
+                        <circle cx="10" cy="50" r="4" fill="#f1e5c3" class="star-point star-3"></circle>
+                        <circle cx="50" cy="90" r="4" fill="#f1e5c3" class="star-point star-4"></circle>
+                    </g>
+                </svg>
+            </div>
+            <h1 class="loading-title">Michael's Hub</h1>
+            <div class="loading-bar">
+                <div class="loading-progress"></div>
+            </div>
+            <p class="loading-text">Initializing experience<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></p>
+            <div class="loading-tech-stack">
+                <div class="tech-badge">Three.js</div>
+                <div class="tech-badge">GSAP</div>
+                <div class="tech-badge">NASA API</div>
+                <div class="tech-badge">Canvas</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rotating Space Background Hero with Three.js -->
     <div class="space-hero">
+        <canvas id="three-canvas" class="three-canvas"></canvas>
         <div class="space-carousel">
             <div id="space-images-container" class="space-images-container">
                 <!-- Space images will rotate here -->
@@ -273,6 +303,9 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

@@ -9,7 +9,7 @@ const COURTLISTENER_API = 'https://www.courtlistener.com/api/rest/v3';
 
 
 // NASA API
-const NASA_API_KEY = process.env.NASA_API_KEY;
+const NASA_API_KEY = 'DEMO_KEY'; // Use demo key or replace with your actual API key
 const NASA_APOD_API = 'https://api.nasa.gov/planetary/apod';
 
 // Space background variables
@@ -17,15 +17,30 @@ let spaceImages = [];
 let currentSpaceIndex = 0;
 let spaceAutoRotateInterval = null;
 
+// Three.js variables
+let threeScene, threeCamera, threeRenderer, threeStars = [];
+let isLoadingComplete = false;
+
 // Initialize the blog
 document.addEventListener('DOMContentLoaded', function() {
-    loadPosts();
-    setupEventListeners();
-    initTheme();
-    loadAnalytics();
-    loadCryptoData(); // Load crypto data on startup
-    loadDefaultCourts(); // Load default court results on startup
-    loadSpaceImages(); // Load NASA space images
+    // Show loading screen and initialize with animation
+    showLoadingScreen();
+    
+    // Load everything in parallel
+    Promise.all([
+        loadSpaceImages(),
+        new Promise(resolve => setTimeout(resolve, 1500)) // Minimum loading time for visual effect
+    ]).then(() => {
+        loadPosts();
+        setupEventListeners();
+        initTheme();
+        loadAnalytics();
+        loadCryptoData();
+        loadDefaultCourts();
+        initThreeJsScene();
+        hideLoadingScreen();
+        isLoadingComplete = true;
+    });
 });
 
 // Setup event listeners
@@ -57,6 +72,119 @@ function setupEventListeners() {
         document.getElementById('char-count').textContent = this.value.length + ' / 10000 characters';
         saveDraft();
     });
+}
+
+// === LOADING SCREEN ===
+function showLoadingScreen() {
+    const loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) {
+        loadingScreen.classList.remove('hidden');
+    }
+}
+
+function hideLoadingScreen() {
+    const loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) {
+        // Stagger the hide animations
+        setTimeout(() => {
+            loadingScreen.classList.add('hidden');
+        }, 300);
+    }
+}
+
+// === THREE.JS INITIALIZATION ===
+function initThreeJsScene() {
+    const canvas = document.getElementById('three-canvas');
+    if (!canvas) return;
+
+    // Scene setup
+    threeScene = new THREE.Scene();
+    threeCamera = new THREE.PerspectiveCamera(75, window.innerWidth / 600, 0.1, 1000);
+    threeRenderer = new THREE.WebGLRenderer({ 
+        canvas: canvas,
+        alpha: true,
+        antialias: true
+    });
+    
+    threeRenderer.setSize(window.innerWidth, 600);
+    threeRenderer.setClearColor(0x000000, 0.3);
+    threeCamera.position.z = 5;
+
+    // Create animated stars field
+    createAnimatedStars();
+
+    // Add mouse interactivity with GSAP
+    document.addEventListener('mousemove', (e) => {
+        if (threeCamera) {
+            const x = (e.clientX / window.innerWidth) * 2 - 1;
+            const y = -(e.clientY / 600) * 2 + 1;
+            
+            gsap.to(threeCamera, {
+                duration: 0.5,
+                x: x * 0.5,
+                y: y * 0.5,
+                ease: 'power2.out'
+            });
+        }
+    });
+
+    // Animation loop with GSAP
+    animate3DScene();
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        if (threeRenderer) {
+            threeRenderer.setSize(window.innerWidth, 600);
+            threeCamera.aspect = window.innerWidth / 600;
+            threeCamera.updateProjectionMatrix();
+        }
+    });
+}
+
+function createAnimatedStars() {
+    const geometry = new THREE.BufferGeometry();
+    const positions = [];
+    const colors = [];
+
+    // Create 1000 stars
+    for (let i = 0; i < 1000; i++) {
+        const x = (Math.random() - 0.5) * 20;
+        const y = (Math.random() - 0.5) * 20;
+        const z = (Math.random() - 0.5) * 20;
+        positions.push(x, y, z);
+
+        // Gold and light gold colors for stars
+        const color = Math.random() > 0.5 ? 0xd4af37 : 0xf1e5c3;
+        colors.push((color >> 16) & 255, (color >> 8) & 255, color & 255);
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
+    
+    const material = new THREE.PointsMaterial({
+        size: 0.1,
+        sizeAttenuation: true,
+        color: 0xd4af37,
+        opacity: 0.8,
+        transparent: true
+    });
+
+    const stars = new THREE.Points(geometry, material);
+    threeScene.add(stars);
+    threeStars.push(stars);
+}
+
+function animate3DScene() {
+    requestAnimationFrame(animate3DScene);
+
+    // Rotate stars
+    threeStars.forEach(star => {
+        star.rotation.x += 0.0001;
+        star.rotation.y += 0.0002;
+    });
+
+    if (threeRenderer) {
+        threeRenderer.render(threeScene, threeCamera);
+    }
 }
 
 // === THEME MANAGEMENT ===
