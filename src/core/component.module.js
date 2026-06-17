@@ -355,4 +355,4 @@ class ComponentRegistry {
 }
 
 // Export components and registry
-export { BaseComponent, BlogComponent, CryptoComponent, CourtComponent, AdminComponent, ComponentRegistry };
+export { BaseComponent, BlogComponent, CryptoComponent, AdminComponent, ComponentRegistry };

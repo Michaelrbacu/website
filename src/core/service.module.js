@@ -273,10 +273,9 @@ class NotificationService {
 // Register all services
 serviceContainer.register('blog', new BlogService());
 serviceContainer.register('crypto', new CryptoService());
-serviceContainer.register('court', new CourtService());
 serviceContainer.register('theme', new ThemeService());
 serviceContainer.register('space', new SpaceService());
 serviceContainer.register('notification', new NotificationService());
 
 // Export for use
-export { serviceContainer, BlogService, CryptoService, CourtService, ThemeService, SpaceService, NotificationService };
+export { serviceContainer, BlogService, CryptoService, ThemeService, SpaceService, NotificationService };

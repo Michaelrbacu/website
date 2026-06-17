@@ -65,7 +65,7 @@ class ApplicationBootstrapper {
         }
 
         // Verify all required services are registered
-        const requiredServices = ['blog', 'crypto', 'court', 'theme', 'space', 'notification'];
+        const requiredServices = ['blog', 'crypto', 'theme', 'space', 'notification'];
         requiredServices.forEach(service => {
             if (!this.serviceContainer.get(service)) {
                 throw new Error(`Required service '${service}' not found`);
@@ -113,19 +113,17 @@ class ApplicationBootstrapper {
         // Register components
         const BlogComponent = window.BlogComponent;
         const CryptoComponent = window.CryptoComponent;
-        const CourtComponent = window.CourtComponent;
         const AdminComponent = window.AdminComponent;
 
         this.componentRegistry.register('blog', BlogComponent);
         this.componentRegistry.register('crypto', CryptoComponent);
-        this.componentRegistry.register('court', CourtComponent);
         this.componentRegistry.register('admin', AdminComponent);
 
         // Initialize all components with dependency injection
         const componentDeps = this.getComponentDependencies();
         this.components = [];
         
-        // Initialize each component, but handle court component specially
+        // Initialize each component
         ['blog', 'crypto', 'admin'].forEach(name => {
             const Component = this.componentRegistry.components.get(name);
             const instance = this.componentRegistry.create(name, componentDeps);
@@ -133,13 +131,6 @@ class ApplicationBootstrapper {
                 this.components.push(instance);
             }
         });
-
-        // Initialize court component but don't call initialize() yet (element doesn't exist)
-        const CourtComponentClass = this.componentRegistry.components.get('court');
-        const courtComponent = new CourtComponentClass(componentDeps);
-        courtComponent.onInit();  // Just call onInit
-        window.courtComponent = courtComponent;
-        this.components.push(courtComponent);
 
         console.log(`✅ Components initialized: ${this.components.length} components`);
     }
@@ -151,7 +142,6 @@ class ApplicationBootstrapper {
         return {
             blog: this.serviceContainer.get('blog'),
             crypto: this.serviceContainer.get('crypto'),
-            court: this.serviceContainer.get('court'),
             theme: this.serviceContainer.get('theme'),
             space: this.serviceContainer.get('space'),
             notification: this.serviceContainer.get('notification')
