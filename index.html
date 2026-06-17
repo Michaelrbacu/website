@@ -9,7 +9,7 @@
 <body>
     <!-- Dynamic Loading Screen -->
     <div id="loading-screen" class="loading-screen">
-        <div class="loading-container">
+            <div class="loading-container">
             <div class="loading-logo">
                 <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
                     <g class="star-group">
@@ -26,13 +26,7 @@
             <div class="loading-bar">
                 <div class="loading-progress"></div>
             </div>
-            <p class="loading-text">Initializing experience<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></p>
-            <div class="loading-tech-stack">
-                <div class="tech-badge">Three.js</div>
-                <div class="tech-badge">GSAP</div>
-                <div class="tech-badge">NASA API</div>
-                <div class="tech-badge">Canvas</div>
-            </div>
+            <p class="loading-text">Initializing experience</p>
         </div>
     </div>
 
@@ -56,13 +50,12 @@
     </div>
 
     <header>
-        <div class="header-content">
-            <div class="header-top">
-                <h1>Michael's Hub</h1>
-                <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">🌙</button>
+            <div class="header-content">
+                <div class="header-top">
+                    <h1>Michael's Hub</h1>
+                    <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">🌙</button>
+                </div>
             </div>
-            <p class="tagline">Hobbies...</p>
-        </div>
         <nav>
             <a href="#" onclick="showPage('blog')" class="nav-link active" id="nav-blog">Blog</a>
             <a href="#" onclick="showPage('admin')" class="nav-link" id="nav-admin">Admin</a>
@@ -81,7 +74,7 @@
                     <button class="filter-btn" onclick="filterPosts('text')">Text</button>
                     <button class="filter-btn" onclick="filterPosts('video')">Videos</button>
                     <button class="filter-btn" onclick="filterPosts('image')">Images</button>
-                    <button class="filter-btn" onclick="sortPostsByViews()">🔥 Trending</button>
+                    <!-- Trending filter removed -->
                 </div>
                 <div id="posts-container" class="posts-grid">
                     <!-- Posts will be loaded here -->
