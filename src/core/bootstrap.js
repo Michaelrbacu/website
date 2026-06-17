@@ -137,18 +137,9 @@ class ApplicationBootstrapper {
         // Initialize court component but don't call initialize() yet (element doesn't exist)
         const CourtComponentClass = this.componentRegistry.components.get('court');
         const courtComponent = new CourtComponentClass(componentDeps);
-        courtComponent.onInit();  // Just call onInit to load data
+        courtComponent.onInit();  // Just call onInit
         window.courtComponent = courtComponent;
         this.components.push(courtComponent);
-        
-        // Preload court data from API
-        console.log('📡 Preloading court data from CourtListener...');
-        try {
-            await courtComponent.courtService.getCases();
-            console.log('✅ Court data preloaded successfully');
-        } catch (error) {
-            console.warn('⚠️ Could not preload court data:', error);
-        }
 
         console.log(`✅ Components initialized: ${this.components.length} components`);
     }
