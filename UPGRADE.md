@@ -35,6 +35,8 @@ Services implement the business logic layer:
 - `BlogService` - Blog CRUD, localStorage persistence
 - `CryptoService` - Crypto data loading and search
 - `CourtService` - Court case search with smart filtering
+
+ - `CourtService` - Court case search with smart filtering
 - `ThemeService` - Dark/light mode management
 - `SpaceService` - NASA APOD imagery and carousel
 - `NotificationService` - User feedback system
@@ -50,6 +52,10 @@ Components manage the user interface with Angular-like patterns:
 - `CourtComponent` - Court search UI
 - `AdminComponent` - Admin dashboard UI
 - `ComponentRegistry` - Component registration and initialization
+
+ - `CourtComponent` - Court search UI
+ - `AdminComponent` - Admin dashboard UI
+ - `ComponentRegistry` - Component registration and initialization
 
 **Key Feature:** Components have lifecycle hooks (onInit, onDestroy, onChanges) and change detection.
 
@@ -128,7 +134,6 @@ const blog = blogService.getPosts();
 
 // Or get the app instance
 const app = getAppInstance();
-const cryptoService = app.getService('crypto');
 ```
 
 ### Add a New Blog Post
@@ -280,7 +285,7 @@ When the page loads, you'll see detailed bootstrap logging:
 ```
 🚀 Starting application bootstrap...
 📦 Initializing services...
-✅ Services initialized: blog, crypto, court, theme, space, notification
+✅ Services initialized: blog, court, theme, space, notification
 🎨 Initializing theme...
 ✅ Theme initialized
 🧩 Initializing components...

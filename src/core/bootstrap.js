@@ -65,7 +65,7 @@ class ApplicationBootstrapper {
         }
 
         // Verify all required services are registered
-        const requiredServices = ['blog', 'crypto', 'theme', 'space', 'notification'];
+        const requiredServices = ['blog', 'theme', 'space', 'notification'];
         requiredServices.forEach(service => {
             if (!this.serviceContainer.get(service)) {
                 throw new Error(`Required service '${service}' not found`);
@@ -112,11 +112,9 @@ class ApplicationBootstrapper {
 
         // Register components
         const BlogComponent = window.BlogComponent;
-        const CryptoComponent = window.CryptoComponent;
         const AdminComponent = window.AdminComponent;
 
         this.componentRegistry.register('blog', BlogComponent);
-        this.componentRegistry.register('crypto', CryptoComponent);
         this.componentRegistry.register('admin', AdminComponent);
 
         // Initialize all components with dependency injection
@@ -124,7 +122,7 @@ class ApplicationBootstrapper {
         this.components = [];
         
         // Initialize each component
-        ['blog', 'crypto', 'admin'].forEach(name => {
+        ['blog', 'admin'].forEach(name => {
             const Component = this.componentRegistry.components.get(name);
             const instance = this.componentRegistry.create(name, componentDeps);
             if (instance && instance.initialize()) {
@@ -141,7 +139,6 @@ class ApplicationBootstrapper {
     getComponentDependencies() {
         return {
             blog: this.serviceContainer.get('blog'),
-            crypto: this.serviceContainer.get('crypto'),
             theme: this.serviceContainer.get('theme'),
             space: this.serviceContainer.get('space'),
             notification: this.serviceContainer.get('notification')
@@ -169,12 +166,10 @@ class ApplicationBootstrapper {
         console.log('📡 Loading async data...');
 
         const spaceService = this.serviceContainer.get('space');
-        const cryptoService = this.serviceContainer.get('crypto');
 
         try {
             await Promise.all([
-                spaceService.loadSpaceImages(),
-                cryptoService.loadCryptoData()
+                spaceService.loadSpaceImages()
             ]);
             console.log('✅ Async data loaded');
         } catch (error) {

@@ -80,35 +80,7 @@ class BlogService {
 /**
  * CryptoService - Manages cryptocurrency data
  */
-class CryptoService {
-    constructor() {
-        this.cryptoData = [];
-    }
-
-    async loadCryptoData() {
-        // Simulated crypto data with realistic API structure
-        this.cryptoData = [
-            { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', currentPrice: 43250, priceChange: 2.5, potentialGain: 125000, signal: 'HOLD' },
-            { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', currentPrice: 2280, priceChange: 1.8, potentialGain: 5000, signal: 'BUY' },
-            { id: 'cardano', name: 'Cardano', symbol: 'ADA', currentPrice: 0.95, priceChange: 3.2, potentialGain: 2.50, signal: 'BUY' },
-            { id: 'solana', name: 'Solana', symbol: 'SOL', currentPrice: 185, priceChange: 4.1, potentialGain: 550, signal: 'HOLD' },
-            { id: 'polkadot', name: 'Polkadot', symbol: 'DOT', currentPrice: 12.50, priceChange: 2.9, potentialGain: 45, signal: 'SELL' },
-            { id: 'ripple', name: 'Ripple', symbol: 'XRP', currentPrice: 2.10, priceChange: 1.5, potentialGain: 8.50, signal: 'HOLD' }
-        ];
-        return this.cryptoData;
-    }
-
-    getCryptoData() {
-        return this.cryptoData;
-    }
-
-    searchCrypto(query) {
-        return this.cryptoData.filter(crypto =>
-            crypto.name.toLowerCase().includes(query.toLowerCase()) ||
-            crypto.symbol.toLowerCase().includes(query.toLowerCase())
-        );
-    }
-}
+// Crypto feature removed: CryptoService class deleted.
 
 /**
  * CourtService - Manages court document data and searches
@@ -272,10 +244,9 @@ class NotificationService {
 
 // Register all services
 serviceContainer.register('blog', new BlogService());
-serviceContainer.register('crypto', new CryptoService());
 serviceContainer.register('theme', new ThemeService());
 serviceContainer.register('space', new SpaceService());
 serviceContainer.register('notification', new NotificationService());
 
 // Export for use
-export { serviceContainer, BlogService, CryptoService, ThemeService, SpaceService, NotificationService };
+export { serviceContainer, BlogService, ThemeService, SpaceService, NotificationService };

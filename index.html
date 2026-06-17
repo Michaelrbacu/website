@@ -65,7 +65,6 @@
         </div>
         <nav>
             <a href="#" onclick="showPage('blog')" class="nav-link active" id="nav-blog">Blog</a>
-            <a href="#" onclick="showPage('crypto')" class="nav-link" id="nav-crypto">Crypto</a>
             <a href="#" onclick="showPage('admin')" class="nav-link" id="nav-admin">Admin</a>
         </nav>
     </header>
@@ -194,34 +193,7 @@
         </div>
     </div>
 
-    <!-- Crypto Page -->
-    <div id="crypto-page" class="page">
-        <section class="crypto-container">
-            <div class="crypto-header">
-                <h2>Crypto Tracker & Predictions</h2>
-                <p class="help-text">💹 Click any coin to see its price chart. Type to search: "Bitcoin", "Ethereum", etc.</p>
-                <div class="crypto-controls">
-                    <input type="text" id="crypto-search" placeholder="Search coins: Bitcoin, Ethereum...">
-                    <select id="crypto-timeframe" onchange="loadCryptoData()">
-                        <option value="1d">1 Day</option>
-                        <option value="7d">7 Days</option>
-                        <option value="30d">30 Days</option>
-                        <option value="1y" selected>1 Year</option>
-                    </select>
-                </div>
-            </div>
-            <div id="crypto-list" class="crypto-grid">
-                <!-- Crypto cards will be loaded here -->
-            </div>
-            <div id="crypto-chart-modal" class="modal">
-                <div class="modal-content">
-                    <span class="close" onclick="closeCryptoChart()">&times;</span>
-                    <h3 id="chart-title"></h3>
-                    <canvas id="priceChart"></canvas>
-                </div>
-            </div>
-        </section>
-    </div>
+    <!-- Crypto page removed -->
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>

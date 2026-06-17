@@ -35,7 +35,6 @@ document.addEventListener('DOMContentLoaded', function() {
         setupEventListeners();
         initTheme();
         loadAnalytics();
-        loadCryptoData();
         loadDefaultCourts();
         initThreeJsScene();
         hideLoadingScreen();
@@ -63,8 +62,7 @@ function setupEventListeners() {
     // Blog search
     document.getElementById('blog-search').addEventListener('input', searchPosts);
 
-    // Crypto search
-    document.getElementById('crypto-search').addEventListener('input', searchCrypto);
+    // Crypto search removed
 
     // Auto-save drafts
     const contentArea = document.getElementById('post-content');
@@ -362,13 +360,14 @@ function showPage(pageName) {
         link.classList.remove('active');
     });
 
-    document.getElementById(pageName + '-page').classList.add('active');
-    document.getElementById('nav-' + pageName).classList.add('active');
+    const pageEl = document.getElementById(pageName + '-page');
+    if (pageEl) pageEl.classList.add('active');
+
+    const navEl = document.getElementById('nav-' + pageName);
+    if (navEl) navEl.classList.add('active');
 
     if (pageName === 'admin') {
         loadAdminPostsList();
-    } else if (pageName === 'crypto') {
-        loadCryptoData();
     }
 }
 
@@ -795,74 +794,7 @@ function loadAnalytics() {
     localStorage.setItem(ANALYTICS_KEY, JSON.stringify(analytics));
 }
 
-// === CRYPTO TRACKING ===
-function loadCryptoData() {
-    const timeframe = document.getElementById('crypto-timeframe')?.value || '1y';
-    const cryptoList = document.getElementById('crypto-list');
-    
-    if (!cryptoList) return; // If page not ready yet, skip
-
-    // Simulated crypto data with predictions (sorted by potential gain)
-    const cryptoData = [
-        { name: 'Solana', symbol: 'SOL', price: 198, change: 12.3, prediction: 220, signal: 'buy' },
-        { name: 'Ripple', symbol: 'XRP', price: 2.45, change: 8.5, prediction: 3.2, signal: 'buy' },
-        { name: 'Bitcoin', symbol: 'BTC', price: 42850, change: 5.2, prediction: 45000, signal: 'buy' },
-        { name: 'Ethereum', symbol: 'ETH', price: 2280, change: 3.8, prediction: 2500, signal: 'hold' },
-        { name: 'Binance Coin', symbol: 'BNB', price: 612, change: -2.1, prediction: 580, signal: 'hold' },
-        { name: 'Cardano', symbol: 'ADA', price: 0.98, change: -1.2, prediction: 1.1, signal: 'hold' },
-    ];
-
-    cryptoList.innerHTML = '';
-    cryptoData.forEach(crypto => {
-        const card = createCryptoCard(crypto);
-        cryptoList.appendChild(card);
-    });
-}
-
-function createCryptoCard(crypto) {
-    const card = document.createElement('div');
-    card.className = 'crypto-card';
-    card.dataset.searchtext = (crypto.name + ' ' + crypto.symbol).toLowerCase();
-
-    const changeClass = crypto.change >= 0 ? 'positive' : 'negative';
-    const changeSymbol = crypto.change >= 0 ? '▲' : '▼';
-    const potentialGain = ((crypto.prediction - crypto.price) / crypto.price * 100).toFixed(1);
-
-    card.innerHTML = `
-        <div class="crypto-name">${crypto.name}</div>
-        <div class="crypto-symbol">${crypto.symbol}</div>
-        <div class="crypto-price">$${crypto.price.toLocaleString('en-US', { maximumFractionDigits: 2 })}</div>
-        <div class="crypto-change ${changeClass}">${changeSymbol} ${Math.abs(crypto.change).toFixed(2)}%</div>
-        
-        <div class="crypto-prediction">
-            <strong>24h Prediction: $${crypto.prediction.toLocaleString('en-US', { maximumFractionDigits: 2 })}</strong>
-            <div style="margin-top: 0.5rem; color: ${potentialGain > 0 ? '#10b981' : '#ef4444'}">
-                Potential: ${potentialGain > 0 ? '+' : ''}${potentialGain}%
-            </div>
-            <div class="signal ${crypto.signal}">
-                ${crypto.signal.toUpperCase()}
-            </div>
-            <small style="display: block; margin-top: 1rem; color: #6b7280;">👆 Click to view chart</small>
-        </div>
-    `;
-
-    card.addEventListener('click', () => showCryptoChart(crypto));
-
-    return card;
-}
-
-function searchCrypto() {
-    const query = document.getElementById('crypto-search').value.toLowerCase();
-    const cards = document.querySelectorAll('.crypto-card');
-    
-    cards.forEach(card => {
-        if (card.dataset.searchtext.includes(query)) {
-            card.style.display = '';
-        } else {
-            card.style.display = 'none';
-        }
-    });
-}
+// Crypto feature removed
 
 // === COURT DOCUMENTS ===
 // Courts feature coming soon
@@ -1119,129 +1051,7 @@ function showCaseDetails(event, encodedCaseData) {
     return false;
 }
 
-// === CRYPTO CHARTS ===
-let cryptoChart = null;
-
-function showCryptoChart(crypto) {
-    const modal = document.getElementById('crypto-chart-modal');
-    const title = document.getElementById('chart-title');
-    
-    title.textContent = `${crypto.name} (${crypto.symbol}) - Price Chart`;
-    modal.classList.add('show');
-
-    // Generate simulated historical data
-    const days = document.getElementById('crypto-timeframe').value === '1d' ? 24 : 
-                 document.getElementById('crypto-timeframe').value === '7d' ? 7 : 
-                 document.getElementById('crypto-timeframe').value === '30d' ? 30 : 365;
-    
-    const historicalData = generateHistoricalData(crypto.price, days);
-    const labels = generateLabels(days);
-
-    // Destroy existing chart if any
-    if (cryptoChart) {
-        cryptoChart.destroy();
-    }
-
-    const ctx = document.getElementById('priceChart').getContext('2d');
-    const minPrice = Math.min(...historicalData);
-    const maxPrice = Math.max(...historicalData);
-    
-    cryptoChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: `${crypto.symbol} Price (USD)`,
-                data: historicalData,
-                borderColor: crypto.change >= 0 ? '#10b981' : '#ef4444',
-                backgroundColor: crypto.change >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 0,
-                pointHoverRadius: 8,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    display: true,
-                    labels: {
-                        color: document.body.classList.contains('dark-mode') ? '#f3f4f6' : '#1f2937',
-                        font: { size: 12 }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: false,
-                    min: minPrice * 0.95,
-                    max: maxPrice * 1.05,
-                    ticks: {
-                        color: document.body.classList.contains('dark-mode') ? '#9ca3af' : '#6b7280',
-                        callback: function(value) {
-                            return '$' + value.toFixed(2);
-                        }
-                    },
-                    grid: {
-                        color: document.body.classList.contains('dark-mode') ? '#374151' : '#e5e7eb'
-                    }
-                },
-                x: {
-                    ticks: {
-                        color: document.body.classList.contains('dark-mode') ? '#9ca3af' : '#6b7280'
-                    },
-                    grid: {
-                        display: false
-                    }
-                }
-            }
-        }
-    });
-}
-
-function generateHistoricalData(currentPrice, days) {
-    const data = [];
-    let price = currentPrice * 0.7; // Start 30% lower
-    
-    for (let i = 0; i < days; i++) {
-        // Random walk with slight upward trend
-        const change = (Math.random() - 0.45) * (currentPrice * 0.05);
-        price = Math.max(price + change, currentPrice * 0.5);
-        data.push(parseFloat(price.toFixed(2)));
-    }
-    
-    // Ensure last point is current price
-    data[data.length - 1] = currentPrice;
-    return data;
-}
-
-function generateLabels(days) {
-    const labels = [];
-    const now = new Date();
-    
-    for (let i = days - 1; i >= 0; i--) {
-        const date = new Date(now);
-        if (days <= 24) {
-            date.setHours(date.getHours() - i);
-            labels.push(date.toLocaleTimeString('en-US', { hour: '2-digit' }));
-        } else if (days <= 30) {
-            date.setDate(date.getDate() - i);
-            labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-        } else {
-            date.setDate(date.getDate() - i);
-            labels.push(date.toLocaleDateString('en-US', { month: 'short' }));
-        }
-    }
-    
-    return labels;
-}
-
-function closeCryptoChart() {
-    document.getElementById('crypto-chart-modal').classList.remove('show');
-}
+// Crypto charts removed
 
 // === UTILITIES ===
 function escapeHtml(text) {

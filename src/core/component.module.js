@@ -214,53 +214,7 @@ class BlogComponent extends BaseComponent {
     }
 }
 
-/**
- * CryptoComponent - Manages crypto tracker
- */
-class CryptoComponent extends BaseComponent {
-    constructor(dependencies) {
-        super('#crypto-section', '', dependencies);
-        this.cryptoService = dependencies.crypto;
-        this.coins = [];
-    }
-
-    async onInit() {
-        this.coins = await this.cryptoService.loadCryptoData();
-    }
-
-    render() {
-        if (!this.element) return;
-
-        this.element.innerHTML = `
-            <div class="crypto-container">
-                <h2>Crypto Portfolio</h2>
-                <div class="crypto-grid">
-                    ${this.renderCryptoCards()}
-                </div>
-            </div>
-        `;
-    }
-
-    renderCryptoCards() {
-        return this.coins.map(coin => `
-            <div class="crypto-card">
-                <div class="crypto-header">
-                    <h3>${coin.name}</h3>
-                    <span class="symbol">${coin.symbol}</span>
-                </div>
-                <div class="crypto-price">
-                    <span class="current-price">$${coin.currentPrice.toFixed(2)}</span>
-                    <span class="change ${coin.priceChange > 0 ? 'positive' : 'negative'}">
-                        ${coin.priceChange > 0 ? '+' : ''}${coin.priceChange}%
-                    </span>
-                </div>
-                <div class="crypto-signal">
-                    <span class="signal-${coin.signal.toLowerCase()}">${coin.signal}</span>
-                </div>
-            </div>
-        `).join('');
-    }
-}
+// CryptoComponent removed.
 
 /**
  * CourtComponent - Placeholder for court features (TBD)
@@ -288,7 +242,6 @@ class AdminComponent extends BaseComponent {
     constructor(dependencies) {
         super('#admin-section', '', dependencies);
         this.blogService = dependencies.blog;
-        this.cryptoService = dependencies.crypto;
         this.courtService = dependencies.court;
     }
 
@@ -296,8 +249,8 @@ class AdminComponent extends BaseComponent {
         if (!this.element) return;
 
         const posts = this.blogService.getPosts().length;
-        const coins = this.cryptoService.getCryptoData().length;
-        const cases = this.courtService.getCases().length;
+        const coins = (this.cryptoService && this.cryptoService.getCryptoData) ? this.cryptoService.getCryptoData().length : 0;
+        const cases = this.courtService ? this.courtService.getCases().length : 0;
 
         this.element.innerHTML = `
             <div class="admin-dashboard">
@@ -355,4 +308,4 @@ class ComponentRegistry {
 }
 
 // Export components and registry
-export { BaseComponent, BlogComponent, CryptoComponent, AdminComponent, ComponentRegistry };
+export { BaseComponent, BlogComponent, AdminComponent, ComponentRegistry };
