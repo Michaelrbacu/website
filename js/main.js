@@ -8,6 +8,9 @@ const EMPTY = { type: 'FeatureCollection', features: [] };
 // NASA's daily global mosaic is complete for yesterday (UTC); today's is still filling in.
 const TODAY_DATE = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
 const BASEMAPS = ['map', 'satellite', 'today'];
+const MAX_OFFSET = 24 * 3600e3; // time slider reaches ±24h
+const PLAY_SPEED = 300; // simulated seconds per real second while playing
+const IMPERIAL = /-(US|LR|MM)$/i.test(navigator.language);
 
 const store = {
   get(key) { try { return localStorage.getItem(key); } catch { return null; } },
@@ -35,7 +38,15 @@ const state = {
   tickCount: 0,
   basemap: 'map',
   terrain: false,
+  timeOffset: 0, // ms between simulated and real time
+  playing: false,
+  nightAt: 0,
+  trackAt: 0,
+  skyAt: 0,
+  weather: { key: null, at: 0, data: null, pending: null },
 };
+
+const simNow = () => new Date(Date.now() + state.timeOffset);
 
 // ---------- formatting ----------
 
@@ -43,8 +54,8 @@ const fmtWhen = new Intl.DateTimeFormat(undefined, { weekday: 'short', hour: 'nu
 const fmtDate = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 const fmtNum = (n, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
 
-function until(date) {
-  const m = Math.round((date - Date.now()) / 60000);
+function until(date, from = simNow()) {
+  const m = Math.round((date - from) / 60000);
   if (m <= 0) return 'now';
   const h = Math.floor(m / 60);
   return h ? `in ${h}h ${m % 60}m` : `in ${m}m`;
@@ -300,7 +311,7 @@ function findSat(id) {
 }
 
 function tick() {
-  const now = new Date();
+  const now = simNow();
   const gmst = orb.gmstFor(now);
   const features = [];
   for (const s of state.active) {
@@ -321,21 +332,64 @@ function tick() {
     if (sel.pos) {
       map.getSource('selected').setData({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [sel.pos.lon, sel.pos.lat] } });
       map.getSource('footprint').setData(orb.footprint(sel.pos));
-      if (state.follow) map.easeTo({ center: [sel.pos.lon, sel.pos.lat], duration: 900, easing: (t) => t });
+      if (state.follow) map.easeTo({ center: [sel.pos.lon, sel.pos.lat], duration: state.playing ? 100 : 900, easing: (t) => t });
     }
-    if (state.tickCount % 60 === 0) map.getSource('track').setData(orb.groundTrack(sel.satrec, now));
+    if (Math.abs(now - state.trackAt) > 60e3) {
+      map.getSource('track').setData(orb.groundTrack(sel.satrec, now));
+      state.trackAt = now.getTime();
+    }
     renderSelectedStats(now, gmst);
   }
 
-  if (state.tickCount % 60 === 0) map.getSource('night')?.setData(orb.nightPolygon(now));
-  if (state.tickCount % 5 === 0) renderSky();
+  if (Math.abs(now - state.nightAt) > 60e3) {
+    map.getSource('night')?.setData(orb.nightPolygon(now));
+    state.nightAt = now.getTime();
+  }
+  if (Date.now() - state.skyAt > (state.playing ? 500 : 5000)) renderSky();
   $('#clock').textContent = `${now.toISOString().slice(11, 19)} UTC`;
   state.tickCount++;
 }
 
+let loopTimer;
+let lastLoop = performance.now();
 function loop() {
+  clearTimeout(loopTimer);
+  const heavy = state.active.length > 3000;
+  const interval = state.playing ? (heavy ? 300 : 100) : (heavy ? 2500 : 1000);
+  const t = performance.now();
+  if (state.playing) {
+    // Advance by real elapsed time so slow frames don't slow the simulation.
+    setTimeOffset(state.timeOffset + PLAY_SPEED * Math.min(t - lastLoop, 1000));
+    if (state.timeOffset >= MAX_OFFSET) setPlaying(false);
+  }
+  lastLoop = t;
   if (!document.hidden) tick();
-  setTimeout(loop, state.active.length > 3000 ? 2500 : 1000);
+  loopTimer = setTimeout(loop, interval);
+}
+
+// ---------- time travel ----------
+
+function setTimeOffset(ms) {
+  state.timeOffset = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, ms));
+  const live = Math.abs(state.timeOffset) < 60e3;
+  if (live && !state.playing) state.timeOffset = 0;
+  $('#time').value = String(Math.round(state.timeOffset / 60e3));
+  $('#live').hidden = live;
+  document.body.classList.toggle('shifted', !live);
+  const m = Math.round(Math.abs(state.timeOffset) / 60e3);
+  const span = `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
+  $('#time-label').textContent = live ? 'Live now' : `${state.timeOffset > 0 ? '+' : '−'}${span} · ${fmtWhen.format(simNow())}`;
+  $('#live-text').textContent = live ? 'LIVE' : state.timeOffset > 0 ? 'FUTURE' : 'PAST';
+}
+
+function setPlaying(on) {
+  state.playing = on;
+  if (on && state.timeOffset >= MAX_OFFSET - 60e3) setTimeOffset(0);
+  const btn = $('#play');
+  btn.setAttribute('aria-pressed', String(on));
+  btn.setAttribute('aria-label', on ? 'Pause' : 'Play time forward');
+  btn.textContent = on ? '❚❚' : '▶';
+  loop();
 }
 
 function select(s, { fly = false } = {}) {
@@ -352,9 +406,10 @@ function select(s, { fly = false } = {}) {
     renderSky();
     return;
   }
-  const now = new Date();
+  const now = simNow();
   s.pos = orb.position(s.satrec, now);
   map.getSource('track').setData(orb.groundTrack(s.satrec, now));
+  state.trackAt = now.getTime();
   renderSelectedShell();
   state.passes.key = null;
   tick();
@@ -444,6 +499,7 @@ function passTarget() {
 }
 
 function renderSky() {
+  state.skyAt = Date.now();
   const obs = observer();
   const box = $('#sky');
   if (!obs) {
@@ -454,7 +510,7 @@ function renderSky() {
     return;
   }
 
-  const now = new Date();
+  const now = simNow();
   const gmst = orb.gmstFor(now);
   const gd = orb.observerGd(obs);
   const up = [];
@@ -465,20 +521,25 @@ function renderSky() {
   }
   up.sort((a, b) => b.el - a.el);
 
+  ensureWeather(obs);
+  const wx = state.weather.key === weatherKey(obs) ? state.weather.data : null;
+
   const target = passTarget();
   let passHtml = '';
   if (target) {
     const key = `${target.id}|${obs.lat.toFixed(2)}|${obs.lon.toFixed(2)}`;
-    if (state.passes.key !== key || Date.now() - state.passes.at > 60e3) {
-      state.passes = { key, at: Date.now(), list: orb.predictPasses(target.satrec, obs, now) };
+    const p0 = state.passes;
+    if (p0.key !== key || Date.now() - p0.at > 60e3 || Math.abs(now - p0.from) > 10 * 60e3) {
+      state.passes = { key, at: Date.now(), from: now.getTime(), list: orb.predictPasses(target.satrec, obs, now, { max: 6 }) };
     }
-    const items = state.passes.list.map((p) => {
+    const items = state.passes.list.filter((p) => p.open || p.end > now).slice(0, 5).map((p) => {
       if (p.open) return `<li class="pass"><div class="pass-when"><b>Always up</b></div><div class="muted">Stays above ${esc(obs.label)}’s horizon, peaking ${fmtNum(p.maxEl)}° ${orb.compass(p.maxAz)}</div></li>`;
       const mins = Math.max(1, Math.round((p.end - p.start) / 60000));
+      const ongoing = p.start <= now;
       return `<li class="pass">
-        <div class="pass-when"><b>${p.ongoing ? 'Overhead now' : fmtWhen.format(p.start)}</b><span>${p.ongoing ? `until ${fmtWhen.format(p.end)}` : until(p.start)}</span></div>
+        <div class="pass-when"><b>${ongoing ? 'Overhead now' : fmtWhen.format(p.start)}</b><span>${ongoing ? `until ${fmtWhen.format(p.end)}` : until(p.start, now)}</span></div>
         <div class="muted">Peaks ${fmtNum(p.maxEl)}° · ${orb.compass(p.startAz)} → ${orb.compass(p.endAz)} · ${mins} min</div>
-        ${p.visible ? '<span class="badge">👁 Visible to the eye</span>' : ''}
+        ${p.visible ? visibilityBadge(wx && feeds.weatherAt(wx, p.maxAt)) : ''}
       </li>`;
     }).join('');
     passHtml = `
@@ -487,7 +548,8 @@ function renderSky() {
   }
 
   box.innerHTML = `
-    <h3>Above ${esc(obs.label)} right now</h3>
+    ${weatherHtml(wx, obs, now)}
+    <h3>Above ${esc(obs.label)} ${state.timeOffset ? 'at this time' : 'right now'}</h3>
     <p class="big-stat"><b>${up.length}</b> satellite${up.length === 1 ? '' : 's'} more than 10° above the horizon</p>
     <ul class="sky-list">
       ${up.slice(0, 6).map((u) => `
@@ -498,6 +560,57 @@ function renderSky() {
         </button></li>`).join('')}
     </ul>
     ${passHtml}`;
+}
+
+// ---------- weather ----------
+
+const weatherKey = (obs) => `${obs.lat.toFixed(1)},${obs.lon.toFixed(1)}`;
+
+async function ensureWeather(obs) {
+  const key = weatherKey(obs);
+  const w = state.weather;
+  if ((w.key === key && Date.now() - w.at < 15 * 60e3) || w.pending === key) return;
+  w.pending = key;
+  try {
+    const data = await feeds.fetchWeather(obs, IMPERIAL);
+    state.weather = { key, at: Date.now(), data, pending: null };
+    renderSky();
+  } catch (err) {
+    console.error(err);
+    w.at = Date.now(); // back off for the cache window instead of retrying every render
+    w.key = key;
+    w.pending = null;
+  }
+}
+
+function weatherHtml(wx, obs, now) {
+  if (!wx) return '';
+  // Live: current conditions. Time-shifted: the hourly forecast for that moment.
+  const cur = state.timeOffset ? feeds.weatherAt(wx, now) : wx.current;
+  if (!cur) return '';
+  const { label, icon } = feeds.describeWeather(cur.code, cur.isDay);
+  const sunAlt = orb.sunAltitude(obs, now);
+  let verdict;
+  if (sunAlt > -6) verdict = ['', sunAlt > 0 ? 'Daylight: satellites show up after dusk' : 'Twilight: the first satellites appear soon'];
+  else if (cur.clouds < 30) verdict = ['good', 'Dark, clear skies: great for spotting satellites'];
+  else if (cur.clouds < 75) verdict = ['ok', 'Dark, but patchy clouds'];
+  else verdict = ['bad', 'Clouded over: satellites hidden'];
+  return `
+    <div class="wx">
+      <span class="wx-icon" aria-hidden="true">${icon}</span>
+      <div class="wx-main">
+        <b>${fmtNum(cur.temp)}${wx.units.temp} · ${esc(label)}</b>
+        <span class="muted">${fmtNum(cur.clouds)}% cloud${cur.wind != null ? ` · wind ${fmtNum(cur.wind)} ${wx.units.wind}` : ''}</span>
+      </div>
+    </div>
+    <p class="wx-verdict ${verdict[0]}">${esc(verdict[1])}</p>`;
+}
+
+function visibilityBadge(w) {
+  if (!w) return '<span class="badge">👁 Visible to the eye</span>';
+  if (w.clouds < 35) return `<span class="badge">👁 Visible · clear skies (${fmtNum(w.clouds)}% cloud)</span>`;
+  if (w.clouds < 75) return `<span class="badge ok">👁 Visible · partly cloudy (${fmtNum(w.clouds)}%)</span>`;
+  return `<span class="badge bad">☁ Visible, but likely clouded out (${fmtNum(w.clouds)}%)</span>`;
 }
 
 // ---------- panel: local discovery ----------
@@ -789,6 +902,18 @@ function wireControls() {
   for (const b of document.querySelectorAll('[data-base]')) b.onclick = () => setBasemap(b.dataset.base);
   $('[data-base="today"]').title = `NASA VIIRS true-color mosaic of the whole Earth, ${TODAY_DATE}`;
   $('#terrain').onclick = () => setTerrain(!state.terrain);
+
+  $('#play').onclick = () => setPlaying(!state.playing);
+  $('#time').addEventListener('input', (e) => {
+    if (state.playing) setPlaying(false);
+    setTimeOffset(Number(e.target.value) * 60e3);
+    tick();
+  });
+  $('#live').onclick = () => {
+    setPlaying(false);
+    setTimeOffset(0);
+    tick();
+  };
   setBasemap(store.get('basemap'));
   if (store.get('terrain') === '1') setTerrain(true, { animate: false });
 
@@ -828,7 +953,7 @@ map.on('load', async () => {
   setupLayers();
   buildChips();
   wireControls();
-  map.getSource('night').setData(orb.nightPolygon(new Date()));
+  map.getSource('night').setData(orb.nightPolygon(simNow()));
   loadHazards();
   renderLocal();
   scheduleLocal();

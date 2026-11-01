@@ -128,6 +128,10 @@ function sunElevation(gd, sun, gmst) {
   return sgp.ecfToLookAngles(gd, sgp.eciToEcf(sun, gmst)).elevation * DEG;
 }
 
+export function sunAltitude(obs, date) {
+  return sunElevation(observerGd(obs), sunEci(date), sgp.gstime(date));
+}
+
 export function subsolarPoint(date) {
   const s = sunEci(date);
   const dec = Math.asin(s.z / Math.hypot(s.x, s.y, s.z));

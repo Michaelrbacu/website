@@ -23,7 +23,7 @@
     <div class="brand">
       <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="6.5" fill="#ffd166"/><ellipse cx="16" cy="16" rx="14" ry="5" fill="none" stroke="currentColor" stroke-width="1.8" transform="rotate(-25 16 16)"/></svg>
       <span>Overhead</span>
-      <span class="live"><i></i>LIVE</span>
+      <span class="live"><i></i><span id="live-text">LIVE</span></span>
     </div>
     <form id="search" role="search">
       <input id="q" type="search" placeholder="Search any place…" autocomplete="off" aria-label="Search for a place">
@@ -35,6 +35,17 @@
   </header>
 
   <nav id="chips" class="chips" aria-label="Map layers"></nav>
+
+  <div class="timebar" role="group" aria-label="Time travel">
+    <button id="play" class="play" aria-pressed="false" aria-label="Play time forward">▶</button>
+    <div class="tb-main">
+      <div class="tb-row">
+        <span id="time-label">Live now</span>
+        <button id="live" class="tb-live" hidden>Back to live</button>
+      </div>
+      <input id="time" type="range" min="-1440" max="1440" step="1" value="0" aria-label="Shift time, in minutes from now">
+    </div>
+  </div>
 
   <div class="basemap" role="group" aria-label="Map style">
     <div class="seg">
@@ -57,6 +68,7 @@
         Quakes <a href="https://earthquake.usgs.gov" target="_blank" rel="noopener">USGS</a> ·
         Events <a href="https://eonet.gsfc.nasa.gov" target="_blank" rel="noopener">NASA EONET</a> ·
         Places <a href="https://www.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a> ·
+        Weather <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> ·
         Map <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> ·
         Imagery <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> &amp; <a href="https://earthdata.nasa.gov/gibs" target="_blank" rel="noopener">NASA GIBS</a><br>
         Built by <a href="https://github.com/Michaelrbacu" target="_blank" rel="noopener">Michael</a> ·

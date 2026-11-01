@@ -162,6 +162,70 @@ export async function fetchShows(center, radiusKm = 40) {
     .filter(Boolean);
 }
 
+// ---------- weather: Open-Meteo ----------
+
+// WMO weather interpretation codes → [label, day icon, night icon]
+const WMO = {
+  0: ['Clear', '☀️', '🌙'], 1: ['Mainly clear', '🌤️', '🌙'], 2: ['Partly cloudy', '⛅', '☁️'], 3: ['Overcast', '☁️', '☁️'],
+  45: ['Fog', '🌫️', '🌫️'], 48: ['Freezing fog', '🌫️', '🌫️'],
+  51: ['Light drizzle', '🌦️', '🌧️'], 53: ['Drizzle', '🌦️', '🌧️'], 55: ['Heavy drizzle', '🌧️', '🌧️'],
+  56: ['Freezing drizzle', '🌧️', '🌧️'], 57: ['Freezing drizzle', '🌧️', '🌧️'],
+  61: ['Light rain', '🌦️', '🌧️'], 63: ['Rain', '🌧️', '🌧️'], 65: ['Heavy rain', '🌧️', '🌧️'],
+  66: ['Freezing rain', '🌧️', '🌧️'], 67: ['Freezing rain', '🌧️', '🌧️'],
+  71: ['Light snow', '🌨️', '🌨️'], 73: ['Snow', '🌨️', '🌨️'], 75: ['Heavy snow', '❄️', '❄️'], 77: ['Snow grains', '🌨️', '🌨️'],
+  80: ['Showers', '🌦️', '🌧️'], 81: ['Showers', '🌧️', '🌧️'], 82: ['Violent showers', '⛈️', '⛈️'],
+  85: ['Snow showers', '🌨️', '🌨️'], 86: ['Snow showers', '🌨️', '🌨️'],
+  95: ['Thunderstorm', '⛈️', '⛈️'], 96: ['Thunderstorm, hail', '⛈️', '⛈️'], 99: ['Thunderstorm, hail', '⛈️', '⛈️'],
+};
+
+export function describeWeather(code, isDay) {
+  const [label, day, night] = WMO[code] || ['Unknown', '🌡️', '🌡️'];
+  return { label, icon: isDay ? day : night };
+}
+
+export async function fetchWeather({ lat, lon }, imperial) {
+  const params = new URLSearchParams({
+    latitude: lat.toFixed(3),
+    longitude: lon.toFixed(3),
+    current: 'temperature_2m,weather_code,cloud_cover,wind_speed_10m,is_day',
+    hourly: 'temperature_2m,weather_code,cloud_cover,is_day',
+    past_days: '1', // the time slider can look back a day
+    forecast_days: '3',
+    timeformat: 'unixtime',
+    timezone: 'auto',
+  });
+  if (imperial) {
+    params.set('temperature_unit', 'fahrenheit');
+    params.set('wind_speed_unit', 'mph');
+  }
+  const d = await getJson(`https://api.open-meteo.com/v1/forecast?${params}`);
+  return {
+    current: {
+      temp: d.current.temperature_2m,
+      code: d.current.weather_code,
+      clouds: d.current.cloud_cover,
+      wind: d.current.wind_speed_10m,
+      isDay: d.current.is_day === 1,
+    },
+    hourly: d.hourly.time.map((t, i) => ({
+      t: t * 1000,
+      temp: d.hourly.temperature_2m[i],
+      code: d.hourly.weather_code[i],
+      clouds: d.hourly.cloud_cover[i],
+      isDay: d.hourly.is_day[i] === 1,
+    })),
+    units: { temp: imperial ? '°F' : '°C', wind: imperial ? 'mph' : 'km/h' },
+  };
+}
+
+// Nearest hourly forecast to `date`, or null outside the forecast window.
+export function weatherAt(wx, date) {
+  const t = date.getTime();
+  let best = null;
+  for (const h of wx.hourly) if (!best || Math.abs(h.t - t) < Math.abs(best.t - t)) best = h;
+  return best && Math.abs(best.t - t) <= 90 * 60e3 ? best : null;
+}
+
 // ---------- search: OpenStreetMap Nominatim ----------
 
 export async function geocode(query) {
