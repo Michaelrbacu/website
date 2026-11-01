@@ -1,202 +1,64 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Michael's Hub</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Overhead · Live Satellite Globe</title>
+  <meta name="description" content="A live 3D globe of satellites overhead. Zoom in anywhere to discover landmarks, natural events and which satellites are passing above you right now.">
+  <meta name="theme-color" content="#05070f">
+  <meta property="og:title" content="Overhead · Live Satellite Globe">
+  <meta property="og:description" content="Watch satellites orbit in real time, see when the ISS flies over you, and explore what's around any spot on Earth.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='7' fill='%23ffd166'/><ellipse cx='16' cy='16' rx='14' ry='5' fill='none' stroke='%23ffffff' stroke-width='2' transform='rotate(-25 16 16)'/></svg>">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <!-- Dynamic Loading Screen -->
-    <div id="loading-screen" class="loading-screen">
-            <div class="loading-container">
-            <div class="loading-logo">
-                <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <g class="star-group">
-                        <circle cx="50" cy="50" r="40" fill="none" stroke="#d4af37" stroke-width="2" class="star-orbit"></circle>
-                        <circle cx="50" cy="50" r="6" fill="#d4af37" class="star-center"></circle>
-                        <circle cx="90" cy="50" r="4" fill="#f1e5c3" class="star-point star-1"></circle>
-                        <circle cx="50" cy="10" r="4" fill="#f1e5c3" class="star-point star-2"></circle>
-                        <circle cx="10" cy="50" r="4" fill="#f1e5c3" class="star-point star-3"></circle>
-                        <circle cx="50" cy="90" r="4" fill="#f1e5c3" class="star-point star-4"></circle>
-                    </g>
-                </svg>
-            </div>
-            <h1 class="loading-title">Michael's Hub</h1>
-            <div class="loading-bar">
-                <div class="loading-progress"></div>
-            </div>
-            <p class="loading-text">Initializing experience</p>
-        </div>
+  <div id="map" aria-label="Interactive globe"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="6.5" fill="#ffd166"/><ellipse cx="16" cy="16" rx="14" ry="5" fill="none" stroke="currentColor" stroke-width="1.8" transform="rotate(-25 16 16)"/></svg>
+      <span>Overhead</span>
+      <span class="live"><i></i>LIVE</span>
     </div>
-
-    <!-- Space Background Hero with Starfield and NASA Imagery -->
-    <div class="space-hero">
-        <canvas id="three-canvas" class="three-canvas"></canvas>
-        <div class="space-carousel">
-            <div id="space-images-container" class="space-images-container">
-                <!-- Space images will rotate here -->
-            </div>
-            <div class="space-overlay"></div>
-            <div class="space-content">
-                <h2>Explore the Cosmos</h2>
-                <p id="space-title">Loading NASA imagery...</p>
-                <div class="space-nav">
-                    <button onclick="previousSpace()" class="space-btn">← Previous</button>
-                    <button onclick="nextSpace()" class="space-btn">Next →</button>
-                </div>
-            </div>
-        </div>
+    <form id="search" role="search">
+      <input id="q" type="search" placeholder="Search any place…" autocomplete="off" aria-label="Search for a place">
+    </form>
+    <div class="top-actions">
+      <button class="btn" id="locate">📍 Near me</button>
+      <button class="btn ghost" id="iss">🛰 Find the ISS</button>
     </div>
+  </header>
 
-    <header>
-            <div class="header-content">
-                <div class="header-top">
-                    <h1>Michael's Hub</h1>
-                    <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">🌙</button>
-                </div>
-            </div>
-        <nav>
-            <a href="#" onclick="showPage('blog')" class="nav-link active" id="nav-blog">Blog</a>
-            <a href="#" onclick="showPage('admin')" class="nav-link" id="nav-admin">Admin</a>
-        </nav>
-    </header>
+  <nav id="chips" class="chips" aria-label="Map layers"></nav>
 
-    <main>
-        <!-- Blog Page -->
-        <div id="blog-page" class="page active">
-            <section class="blog-container">
-                <div class="search-bar">
-                    <input type="text" id="blog-search" placeholder="Search posts...">
-                </div>
-                <div class="filters">
-                    <button class="filter-btn active" onclick="filterPosts('all')">All Posts</button>
-                    <button class="filter-btn" onclick="filterPosts('text')">Text</button>
-                    <button class="filter-btn" onclick="filterPosts('video')">Videos</button>
-                    <button class="filter-btn" onclick="filterPosts('image')">Images</button>
-                    <!-- Trending filter removed -->
-                </div>
-                <div id="posts-container" class="posts-grid">
-                    <!-- Posts will be loaded here -->
-                </div>
-                <div id="empty-state" class="empty-state">
-                    <p>No posts yet. <a href="#" onclick="showPage('admin')">Create your first post!</a></p>
-                </div>
-            </section>
-        </div>
-
-        <!-- Admin Page -->
-        <div id="admin-page" class="page">
-            <section class="admin-container">
-                <h2>Admin Panel</h2>
-                
-                <div class="admin-section">
-                    <h3>Create New Post</h3>
-                    <form id="post-form">
-                        <div class="form-group">
-                            <label for="post-title">Title</label>
-                            <input type="text" id="post-title" required placeholder="Post title">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="post-content">Content</label>
-                            <textarea id="post-content" rows="8" required placeholder="Write your post..."></textarea>
-                            <small id="char-count">0 / 10000 characters</small>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="post-type">Post Type</label>
-                                <select id="post-type" onchange="updatePostTypeUI()">
-                                    <option value="text">Text Post</option>
-                                    <option value="video">Video</option>
-                                    <option value="image">Image</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="post-category">Category</label>
-                                <input type="text" id="post-category" placeholder="e.g., Technology">
-                            </div>
-                        </div>
-
-                        <div id="video-section" class="form-group hidden">
-                            <label for="video-url">Video URL (YouTube, Vimeo, or direct link)</label>
-                            <input type="url" id="video-url" placeholder="https://www.youtube.com/embed/...">
-                        </div>
-
-                        <div id="image-section" class="form-group hidden">
-                            <label for="image-url">Image URL</label>
-                            <input type="url" id="image-url" placeholder="https://...">
-                            <small>or paste image data URL</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="post-tags">Tags (comma-separated)</label>
-                            <input type="text" id="post-tags" placeholder="tag1, tag2, tag3">
-                        </div>
-
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="post-draft"> Save as Draft
-                            </label>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">Create Post</button>
-                    </form>
-                </div>
-
-                <div class="admin-section">
-                    <h3>Manage Posts</h3>
-                    <div class="manage-tabs">
-                        <button class="tab-btn active" onclick="switchPostsTab('published')">Published</button>
-                        <button class="tab-btn" onclick="switchPostsTab('drafts')">Drafts</button>
-                    </div>
-                    <div id="admin-posts-list">
-                        <!-- Admin post list will be loaded here -->
-                    </div>
-                    <div id="admin-empty-state" class="empty-state">
-                        <p>No posts to manage yet.</p>
-                    </div>
-                </div>
-
-                <div class="admin-section">
-                    <h3>Tools</h3>
-                    <div class="admin-tools">
-                        <button class="btn btn-secondary" onclick="exportPosts()">📥 Export All Posts</button>
-                        <button class="btn btn-secondary" onclick="downloadBackup()">💾 Download Backup</button>
-                        <button class="btn btn-secondary" onclick="viewAnalytics()">📊 View Analytics</button>
-                    </div>
-                </div>
-            </section>
-        </div>
-    </main>
-
-    <footer>
-        <p>&copy; 2026 Michael's Blog. All rights reserved.</p>
-    </footer>
-
-    <!-- Modal for viewing full post -->
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <div id="modal-body">
-                <!-- Post content will be loaded here -->
-            </div>
-        </div>
+  <aside id="panel" class="panel collapsed">
+    <button id="panel-toggle" class="panel-handle" aria-label="Toggle details"><span></span></button>
+    <div class="panel-body">
+      <section id="sel" class="card accent" hidden></section>
+      <section id="sky" class="card"></section>
+      <section id="local" class="card"></section>
+      <footer class="credits">
+        <span id="count">Loading satellites…</span> · <span id="clock"></span><br>
+        Orbits <a href="https://celestrak.org" target="_blank" rel="noopener">CelesTrak</a> ·
+        Quakes <a href="https://earthquake.usgs.gov" target="_blank" rel="noopener">USGS</a> ·
+        Events <a href="https://eonet.gsfc.nasa.gov" target="_blank" rel="noopener">NASA EONET</a> ·
+        Places <a href="https://www.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a> ·
+        Map <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a><br>
+        Built by <a href="https://github.com/Michaelrbacu" target="_blank" rel="noopener">Michael</a> ·
+        <a href="https://github.com/Michaelrbacu/website" target="_blank" rel="noopener">Source</a>
+      </footer>
     </div>
+  </aside>
 
-    <!-- Crypto page removed -->
+  <div id="toast" role="status" hidden></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
-    
-    <!-- Angular-like Modular Architecture -->
-    <script src="src/core/service.module.js"></script>
-    <script src="src/core/component.module.js"></script>
-    <script src="script.js"></script>
-    <script src="src/core/bootstrap.js"></script>
+  <script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/satellite.js@5.0.0/dist/satellite.min.js"></script>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
