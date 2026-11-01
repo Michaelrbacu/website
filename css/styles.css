@@ -196,6 +196,41 @@ button { font: inherit; color: inherit; }
   background: var(--c, var(--accent));
 }
 
+/* ---------- basemap switcher ---------- */
+
+.basemap {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 3;
+  display: flex;
+  gap: 8px;
+}
+.seg, .seg-solo {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
+}
+.seg { display: flex; padding: 3px; }
+.seg button, .seg-solo {
+  padding: 6px 13px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.seg-solo { padding: 6px 14px; background: var(--surface); }
+.seg button:hover, .seg-solo:hover { color: var(--text); }
+.seg button[aria-pressed='true'] { background: var(--accent); color: var(--accent-ink); }
+.seg-solo[aria-pressed='true'] { color: var(--green); border-color: color-mix(in srgb, var(--green) 55%, transparent); }
+
 .icon-btn {
   flex: none;
   width: 30px; height: 30px;
@@ -500,5 +535,7 @@ ul { list-style: none; margin: 0; padding: 0; }
   .card { box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(255, 255, 255, 0.03); }
 
   .maplibregl-ctrl-bottom-right { right: 0; bottom: 140px; }
+  .basemap { left: 12px; bottom: 146px; }
+  .seg button, .seg-solo { padding: 6px 10px; }
   #toast { bottom: 150px; max-width: calc(100% - 32px); }
 }

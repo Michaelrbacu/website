@@ -9,6 +9,7 @@ Live at [michaelrbacu.com](https://michaelrbacu.com)
 - **ISS pass predictions** for your location. Each pass shows rise and set directions and peak elevation, and is flagged when it will be visible to the naked eye.
 - **Zoom into any place** and the globe turns into a street map showing notable landmarks, nearby natural events, and the satellites over that exact spot.
 - **Live Earth events** worldwide: earthquakes (USGS) plus wildfires, storms and ice (NASA EONET).
+- **Three ways to view the planet**: a dark vector map, high-resolution satellite imagery, or **Today**, NASA's real image of the whole Earth from the last day, clouds and all. Add **3D terrain** to any of them to raise the mountains.
 
 ## How it works
 
@@ -21,6 +22,9 @@ Everything runs in the browser. There's no backend, no build step and no API key
 | Earthquakes | USGS real-time GeoJSON feed |
 | Natural events | NASA EONET v3 |
 | Places | Wikipedia GeoSearch |
+| Satellite imagery | Esri World Imagery |
+| Today's Earth | NASA GIBS, VIIRS NOAA-20 corrected-reflectance daily mosaic |
+| 3D terrain | AWS Open Data Terrain Tiles (Terrarium encoding) |
 | Search | OpenStreetMap Nominatim |
 
 Engineering notes:

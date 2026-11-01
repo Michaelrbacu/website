@@ -5,6 +5,14 @@ import * as feeds from './feeds.js';
 const ISS_ID = '25544';
 const LABELS = { [ISS_ID]: 'ISS', 48274: 'Tiangong' };
 const EMPTY = { type: 'FeatureCollection', features: [] };
+// NASA's daily global mosaic is complete for yesterday (UTC); today's is still filling in.
+const TODAY_DATE = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+const BASEMAPS = ['map', 'satellite', 'today'];
+
+const store = {
+  get(key) { try { return localStorage.getItem(key); } catch { return null; } },
+  set(key, value) { try { localStorage.setItem(key, value); } catch {} },
+};
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -25,6 +33,8 @@ const state = {
   localSeq: 0,
   passes: { key: null, at: 0, list: [] },
   tickCount: 0,
+  basemap: 'map',
+  terrain: false,
 };
 
 // ---------- formatting ----------
@@ -91,10 +101,54 @@ const groupColor = ['match', ['get', 'group'], ...Object.entries(orb.GROUPS).fla
 const hazardColor = ['match', ['get', 'kind'], ...Object.entries(feeds.HAZARD_KINDS).flatMap(([k, h]) => [k, h.color]), '#ffd166'];
 
 function setupLayers() {
-  const firstLabel = map.getStyle().layers.find((l) => l.type === 'symbol' && l.id.startsWith('place'))?.id;
+  const layers = map.getStyle().layers;
+  const firstSymbol = layers.find((l) => l.type === 'symbol')?.id;
+  const firstLabel = layers.find((l) => l.type === 'symbol' && l.id.startsWith('place'))?.id;
   for (const id of ['night', 'hazards', 'places', 'shows', 'track', 'footprint', 'sats', 'selected']) {
     map.addSource(id, { type: 'geojson', data: EMPTY });
   }
+
+  // Basemaps and terrain sit under every label so place names stay readable.
+  map.addSource('esri', {
+    type: 'raster',
+    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+    tileSize: 256,
+    maxzoom: 19,
+    attribution: 'Imagery © <a href="https://www.esri.com">Esri</a>, Maxar, Earthstar Geographics',
+  });
+  map.addSource('gibs', {
+    type: 'raster',
+    tiles: [`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${TODAY_DATE}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`],
+    tileSize: 256,
+    maxzoom: 9,
+    attribution: `<a href="https://earthdata.nasa.gov/gibs">NASA GIBS</a> VIIRS ${TODAY_DATE}`,
+  });
+  const dem = {
+    type: 'raster-dem',
+    tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+    encoding: 'terrarium',
+    tileSize: 256,
+    maxzoom: 15,
+    attribution: 'Elevation: <a href="https://registry.opendata.aws/terrain-tiles/">Terrain Tiles</a>',
+  };
+  map.addSource('dem', dem);
+  map.addSource('dem-shade', dem); // separate source: MapLibre renders terrain and hillshade better apart
+
+  map.addLayer({ id: 'imagery', type: 'raster', source: 'esri', layout: { visibility: 'none' } }, firstSymbol);
+  map.addLayer({
+    id: 'today', type: 'raster', source: 'gibs', layout: { visibility: 'none' },
+    // NASA's daily mosaic tops out at zoom 9; fade into Esri's sharper imagery beyond that.
+    paint: { 'raster-opacity': ['interpolate', ['linear'], ['zoom'], 7, 1, 9.5, 0] },
+  }, firstSymbol);
+  map.addLayer({
+    id: 'hillshade', type: 'hillshade', source: 'dem-shade', layout: { visibility: 'none' },
+    paint: {
+      'hillshade-shadow-color': '#000000',
+      'hillshade-highlight-color': 'rgba(255,255,255,0.18)',
+      'hillshade-accent-color': '#0a0f1c',
+      'hillshade-exaggeration': 0.6,
+    },
+  }, firstSymbol);
 
   map.addLayer({
     id: 'night', type: 'fill', source: 'night',
@@ -680,6 +734,28 @@ function locate() {
   );
 }
 
+function setBasemap(name) {
+  state.basemap = BASEMAPS.includes(name) ? name : 'map';
+  // "Today" layers NASA's daily mosaic over Esri, which takes over when zoomed in.
+  map.setLayoutProperty('imagery', 'visibility', state.basemap === 'map' ? 'none' : 'visible');
+  map.setLayoutProperty('today', 'visibility', state.basemap === 'today' ? 'visible' : 'none');
+  map.setLayoutProperty('hillshade', 'visibility', state.terrain && state.basemap === 'map' ? 'visible' : 'none');
+  for (const b of document.querySelectorAll('[data-base]')) b.setAttribute('aria-pressed', String(b.dataset.base === state.basemap));
+  store.set('basemap', state.basemap);
+}
+
+function setTerrain(on, { animate = true } = {}) {
+  state.terrain = on;
+  map.setTerrain(on ? { source: 'dem', exaggeration: 1.5 } : null);
+  map.setLayoutProperty('hillshade', 'visibility', on && state.basemap === 'map' ? 'visible' : 'none');
+  $('#terrain').setAttribute('aria-pressed', String(on));
+  store.set('terrain', on ? '1' : '0');
+  if (!animate) return;
+  if (on && map.getZoom() < 8) toast('3D terrain on. Zoom into some mountains, or search “Yosemite”.');
+  else if (on && map.getPitch() < 30) map.easeTo({ pitch: 60, duration: 1200 });
+  else if (!on && map.getPitch() > 0) map.easeTo({ pitch: 0, duration: 800 });
+}
+
 function openPanel() {
   $('#panel').classList.remove('collapsed');
 }
@@ -709,6 +785,12 @@ function wireControls() {
   });
 
   $('#panel-toggle').onclick = () => $('#panel').classList.toggle('collapsed');
+
+  for (const b of document.querySelectorAll('[data-base]')) b.onclick = () => setBasemap(b.dataset.base);
+  $('[data-base="today"]').title = `NASA VIIRS true-color mosaic of the whole Earth, ${TODAY_DATE}`;
+  $('#terrain').onclick = () => setTerrain(!state.terrain);
+  setBasemap(store.get('basemap'));
+  if (store.get('terrain') === '1') setTerrain(true, { animate: false });
 
   // Delegated clicks inside the side panel
   $('#panel').addEventListener('click', (e) => {
